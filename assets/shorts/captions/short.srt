@@ -10,13 +10,15 @@ whole words, pieces, or punctuation.
 
 3
 00:00:09,283 --> 00:00:16,709
-During training, the model reads huge text collections
-and learns patterns of what tends to follow what in many contexts.
+During training, the model reads
+huge text collections and learns patterns
+of what tends to follow in many contexts.
 
 4
 00:00:16,709 --> 00:00:24,135
-Given a prompt, it computes probabilities for the next token,
-selects one, and repeats, building a sequence that sounds fluent.
+Given a prompt, it computes probabilities
+for the next token, selects one,
+and repeats, building fluent text.
 
 5
 00:00:24,135 --> 00:00:28,962
@@ -25,8 +27,9 @@ shifting the odds for what comes next.
 
 6
 00:00:28,962 --> 00:00:33,789
-In many systems, thousands of possible next tokens
-are scored at every step.
+In many systems, thousands of
+possible next tokens are scored
+at every step.
 
 7
 00:00:33,789 --> 00:00:34,903

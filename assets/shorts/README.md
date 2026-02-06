@@ -39,6 +39,6 @@ Build steps (reference)
 4) Render video
    ffmpeg -f lavfi -i "color=c=#0b0b0f:s=1080x1920:d=34.90" \
      -i assets/shorts/audio/mix.wav \
-     -vf "subtitles=assets/shorts/captions/short.srt:force_style='FontName=DejaVu Sans,FontSize=46,PrimaryColour=&HFFFFFF&,OutlineColour=&H000000&,Outline=3,Shadow=0,Alignment=2,MarginV=220,MarginL=80,MarginR=80'" \
+     -vf "subtitles=assets/shorts/captions/short.srt:force_style='FontName=DejaVu Sans,FontSize=40,PrimaryColour=&HFFFFFF&,OutlineColour=&H000000&,Outline=3,Shadow=0,Alignment=2,MarginV=320,MarginL=140,MarginR=140'" \
      -c:v libx264 -preset veryfast -crf 20 -pix_fmt yuv420p \
      -c:a aac -b:a 192k -shortest assets/shorts/video/shorts_ai_text_1080x1920.mp4
