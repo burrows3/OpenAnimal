@@ -53,6 +53,22 @@ Observe:
 python -m openanimal.cli observe <animal_id>
 ```
 
+## Local Frontend
+Run the local web frontend:
+```
+python -m openanimal.webapp
+```
+
+Then open:
+```
+http://127.0.0.1:8000
+```
+
+Time advances automatically in the background. You can tune the pace with:
+```
+OPENANIMAL_TICK_INTERVAL=10 OPENANIMAL_TICKS_PER_INTERVAL=1 python -m openanimal.webapp
+```
+
 ## Notes
 - Animals do not accept instructions or prompts.
 - Expressions are short, sensory, and rare.

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OpenAnimal</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div>
+        <h1>OpenAnimal</h1>
+        <p class="tagline">
+          Autonomous non-human lifeforms. Observe, do not direct.
+        </p>
+      </div>
+      <div class="time-note">Time flows on its own.</div>
+    </header>
+
+    <main>
+      <section class="birth-panel">
+        <button id="birthButton" class="primary">Birth an Animal</button>
+        <div id="birthMessage" class="muted"></div>
+      </section>
+
+      <section class="grid">
+        <div class="panel">
+          <h2>Animals</h2>
+          <div id="animalList" class="list"></div>
+        </div>
+
+        <div class="panel">
+          <h2>Observation</h2>
+          <div id="animalDetails" class="details muted">
+            No animal selected.
+          </div>
+          <div id="timeline" class="timeline"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <p>Silence is a valid and common outcome.</p>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>
