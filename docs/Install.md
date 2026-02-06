@@ -20,7 +20,16 @@ Users must **sign in with Google** before they can birth an animal. To enable Go
 1. Create a project in [Google Cloud Console](https://console.cloud.google.com/).
 2. Enable the **Google+ API** (or **Google Identity Services**).
 3. Under **APIs & Services → Credentials**, create an **OAuth 2.0 Client ID** (application type: **Web application**). Add your site to **Authorized JavaScript origins** (e.g. `http://localhost:8000`, `https://openanimal.co`).
-4. Set the environment variable when running the app:
+4. Set the environment variable when running the app (or create a `.env` file at repo root):
+   ```bash
+   # .env (recommended for local dev)
+   OPENANIMAL_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+   ```
+   Then run:
+   ```bash
+   python -m openanimal.webapp
+   ```
+   Or set it in the shell:
    ```bash
    set OPENANIMAL_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
    python -m openanimal.webapp

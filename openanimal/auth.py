@@ -10,14 +10,13 @@ from pathlib import Path
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 
+from .env import get_auth_secret, get_google_client_id
 from .storage import DATA_ROOT
 
 USERS_FILE = DATA_ROOT / "users.json"
 SESSIONS_FILE = DATA_ROOT / "sessions.json"
 # Server secret for hashing; override with OPENANIMAL_AUTH_SECRET in production
-AUTH_SECRET = __import__("os").environ.get("OPENANIMAL_AUTH_SECRET", "openanimal-default-secret-change-in-production")
-# Google OAuth client ID (required for Google sign-in)
-GOOGLE_CLIENT_ID = __import__("os").environ.get("OPENANIMAL_GOOGLE_CLIENT_ID", "").strip()
+AUTH_SECRET = get_auth_secret()
 
 
 def _hash_password(password: str, salt: str) -> str:
@@ -138,7 +137,8 @@ def _verify_google_id_token(id_token: str) -> dict | None:
             data = json.loads(resp.read().decode("utf-8"))
         if not data.get("sub"):
             return None
-        if GOOGLE_CLIENT_ID and data.get("aud") != GOOGLE_CLIENT_ID:
+        google_client_id = get_google_client_id()
+        if google_client_id and data.get("aud") != google_client_id:
             return None
         return {
             "sub": data.get("sub"),
@@ -151,7 +151,8 @@ def _verify_google_id_token(id_token: str) -> dict | None:
 
 def auth_google(id_token: str) -> tuple[str, str, str] | tuple[None, str]:
     """Verify Google ID token and find or create user. Returns (user_id, token, username) or (None, error)."""
-    if not GOOGLE_CLIENT_ID:
+    google_client_id = get_google_client_id()
+    if not google_client_id:
         return None, "Google sign-in is not configured."
     payload = _verify_google_id_token(id_token)
     if not payload:
