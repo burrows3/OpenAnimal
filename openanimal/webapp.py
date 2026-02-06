@@ -12,6 +12,7 @@ from urllib.parse import parse_qs, urlparse
 
 from .agent import LifeAgent
 from .auth import auth_google, get_user_by_token, login, register
+from .env import get_google_client_id
 from .simulator import Simulator
 from .storage import list_agents, load_agent, save_agent
 
@@ -192,7 +193,7 @@ class OpenAnimalHandler(BaseHTTPRequestHandler):
     def _api_config(self) -> None:
         """Public config for frontend (e.g. Google Client ID for sign-in)."""
         self._send_json({
-            "google_client_id": os.environ.get("OPENANIMAL_GOOGLE_CLIENT_ID", "").strip(),
+            "google_client_id": get_google_client_id(),
         })
 
     def _api_auth_google(self, body: bytes | None = None) -> None:
