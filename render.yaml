@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: openanimal
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m openanimal.webapp
+    envVars:
+      - key: OPENANIMAL_GOOGLE_CLIENT_ID
+        value: your-client-id.apps.googleusercontent.com
