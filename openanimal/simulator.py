@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from .archive import create_snapshot
 from .config import ARCHIVE_INTERVAL_TICKS
-from .storage import list_agents, load_agent, save_agent, save_archive
+from .storage import get_recent_feed, list_agents, load_agent, save_agent, save_archive
 from .world import WorldSignalStream
 
 
@@ -23,10 +23,13 @@ class Simulator:
     def run(self, ticks: int = 1) -> SimulationReport:
         expressions = 0
         for _ in range(ticks):
-            for animal_id in list_agents():
+            animal_ids = list_agents()
+            for animal_id in animal_ids:
                 agent = load_agent(animal_id)
                 world_signals = self.world.signals_for_tick(agent.age_ticks)
-                output = agent.tick(world_signals)
+                # Pass recent expressions from other animals so this one can interact
+                recent = get_recent_feed(exclude_animal_id=animal_id, limit=10)
+                output = agent.tick(world_signals, recent_feed=recent)
                 if output:
                     expressions += 1
                 if agent.age_ticks % ARCHIVE_INTERVAL_TICKS == 0:

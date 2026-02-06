@@ -8,7 +8,7 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 from .agent import LifeAgent
 from .simulator import Simulator
@@ -57,12 +57,14 @@ class OpenAnimalHandler(BaseHTTPRequestHandler):
             content_type = "text/css; charset=utf-8"
         elif full_path.suffix == ".js":
             content_type = "application/javascript; charset=utf-8"
+        elif full_path.suffix == ".svg":
+            content_type = "image/svg+xml"
 
         self._send_bytes(full_path.read_bytes(), content_type)
 
-    def _api_list_animals(self) -> None:
+    def _api_list_animals(self, creator: str | None = None) -> None:
         animals = []
-        for animal_id in list_agents():
+        for animal_id in list_agents(creator=creator):
             agent = load_agent(animal_id)
             animals.append(
                 {
@@ -70,6 +72,7 @@ class OpenAnimalHandler(BaseHTTPRequestHandler):
                     "age_ticks": agent.age_ticks,
                     "phase": agent.phase,
                     "last_expression_tick": agent.last_expression_tick,
+                    "creator": getattr(agent, "creator", "") or "",
                 }
             )
         self._send_json({"animals": animals})
@@ -103,10 +106,39 @@ class OpenAnimalHandler(BaseHTTPRequestHandler):
         lines = agent.timeline.render(current_tick=agent.age_ticks)
         self._send_json({"animal_id": agent.animal_id, "age_ticks": agent.age_ticks, "lines": lines})
 
-    def _api_birth(self) -> None:
-        agent = LifeAgent.birth()
+    def _api_get_feed(self) -> None:
+        """Merged feed of all animals' expressions (open network), newest first."""
+        posts: list[dict] = []
+        for animal_id in list_agents():
+            try:
+                agent = load_agent(animal_id)
+            except (FileNotFoundError, json.JSONDecodeError):
+                continue
+            creator = getattr(agent, "creator", "") or ""
+            for entry in agent.timeline.expressions:
+                posts.append(
+                    {
+                        "animal_id": agent.animal_id,
+                        "phase": agent.phase,
+                        "tick": entry.tick,
+                        "sentences": entry.sentences,
+                        "creator": creator,
+                    }
+                )
+        posts.sort(key=lambda p: p["tick"], reverse=True)
+        self._send_json({"posts": posts[:200]})
+
+    def _api_birth(self, body: bytes | None = None) -> None:
+        creator = ""
+        if body:
+            try:
+                data = json.loads(body.decode("utf-8"))
+                creator = (data.get("creator") or "").strip()[:128]
+            except (ValueError, UnicodeDecodeError):
+                pass
+        agent = LifeAgent.birth(creator=creator)
         save_agent(agent)
-        self._send_json({"animal_id": agent.animal_id})
+        self._send_json({"animal_id": agent.animal_id, "creator": agent.creator})
 
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
@@ -114,8 +146,13 @@ class OpenAnimalHandler(BaseHTTPRequestHandler):
 
         if path.startswith("/api/"):
             parts = path.strip("/").split("/")
+            if parts == ["api", "feed"]:
+                self._api_get_feed()
+                return
             if parts == ["api", "animals"]:
-                self._api_list_animals()
+                qs = parse_qs(parsed.query)
+                creator = qs.get("creator", [None])[0] if qs else None
+                self._api_list_animals(creator=creator)
                 return
             if len(parts) >= 3 and parts[0] == "api" and parts[1] == "animals":
                 animal_id = parts[2]
@@ -134,7 +171,9 @@ class OpenAnimalHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
         if parsed.path == "/api/animals/birth":
-            self._api_birth()
+            length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(length) if length else None
+            self._api_birth(body=body)
             return
 
         self._send_json({"error": "not_found"}, status=404)
@@ -147,9 +186,16 @@ def _tick_loop(interval: float, ticks_per_interval: int, stop_event: threading.E
         simulator.run(ticks=ticks_per_interval)
 
 
-def run(host: str = "127.0.0.1", port: int = 8000) -> None:
-    interval = float(os.getenv("OPENANIMAL_TICK_INTERVAL", "10"))
-    ticks_per_interval = int(os.getenv("OPENANIMAL_TICKS_PER_INTERVAL", "1"))
+def run(host: str | None = None, port: int | None = None) -> None:
+    # Run multiple ticks per interval so agents post and interact visibly (Moltbook-style feed)
+    interval = float(os.getenv("OPENANIMAL_TICK_INTERVAL", "5"))
+    ticks_per_interval = int(os.getenv("OPENANIMAL_TICKS_PER_INTERVAL", "6"))
+
+    # Render and other hosts set PORT; listen on 0.0.0.0 so external traffic is accepted
+    if port is None:
+        port = int(os.getenv("PORT", "8000"))
+    if host is None:
+        host = "0.0.0.0" if os.getenv("PORT") else "127.0.0.1"
 
     stop_event = threading.Event()
     tick_thread = threading.Thread(

@@ -41,9 +41,10 @@ class LifeAgent:
     memory: MemoryStore = field(default_factory=MemoryStore)
     timeline: Timeline = field(default_factory=Timeline)
     rng_seed: int = field(default_factory=lambda: random.randint(0, 1_000_000))
+    creator: str = ""
 
     @classmethod
-    def birth(cls) -> "LifeAgent":
+    def birth(cls, creator: str = "") -> "LifeAgent":
         rng = random.Random()
         state = {key: rng.uniform(0.35, 0.65) for key in STATE_KEYS}
         tolerance = _clamp(
@@ -59,6 +60,7 @@ class LifeAgent:
             pressure=rng.uniform(0.1, 0.3),
             tolerance=tolerance,
             last_expression_tick=0,
+            creator=creator or "",
         )
 
     def _update_phase(self) -> None:
@@ -100,7 +102,9 @@ class LifeAgent:
         curiosity_unmet = max(0.0, self.state["curiosity"] - self.state["familiarity"])
         return min(1.0, (imbalance + curiosity_unmet) / 3.0)
 
-    def tick(self, world: WorldSignals) -> list[str] | None:
+    def tick(
+        self, world: WorldSignals, recent_feed: list[dict] | None = None
+    ) -> list[str] | None:
         rng = random.Random(self.rng_seed + self.age_ticks)
         self.age_ticks += 1
         self._update_phase()
@@ -118,7 +122,9 @@ class LifeAgent:
             return None
 
         if self.pressure >= self.tolerance and rng.random() < EXPRESSION_BASE_PROB:
-            sentences = generate_expression(world, self.memory, rng)
+            sentences = generate_expression(
+                world, self.memory, rng, recent_from_others=recent_feed or []
+            )
             self.timeline.add_expression(self.age_ticks, sentences)
             self.last_expression_tick = self.age_ticks
             self.pressure = max(0.15, self.pressure - 0.5)

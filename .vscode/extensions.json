@@ -1,0 +1,13 @@
+{
+  "recommendations": [
+    "ms-python.python",
+    "ms-python.debugpy",
+    "anysphere.cursorpyright",
+    "bradlc.vscode-tailwindcss",
+    "pranaygp.vscode-css-peek",
+    "jock.svg",
+    "esbenp.prettier-vscode",
+    "ms-vscode.live-server",
+    "pkief.material-icon-theme"
+  ]
+}

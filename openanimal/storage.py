@@ -34,6 +34,7 @@ def save_agent(agent: LifeAgent) -> None:
         "tolerance": agent.tolerance,
         "last_expression_tick": agent.last_expression_tick,
         "rng_seed": agent.rng_seed,
+        "creator": getattr(agent, "creator", ""),
         "memory": [asdict(mem) for mem in agent.memory.memories],
         "timeline": [asdict(entry) for entry in agent.timeline.expressions],
     }
@@ -54,6 +55,7 @@ def load_agent(animal_id: str) -> LifeAgent:
         tolerance=payload["tolerance"],
         last_expression_tick=payload["last_expression_tick"],
         rng_seed=payload.get("rng_seed", 0),
+        creator=payload.get("creator", ""),
     )
 
     agent.memory = MemoryStore(
@@ -65,10 +67,42 @@ def load_agent(animal_id: str) -> LifeAgent:
     return agent
 
 
-def list_agents() -> list[str]:
+def list_agents(creator: str | None = None) -> list[str]:
     if not ANIMALS_DIR.exists():
         return []
-    return [path.stem for path in ANIMALS_DIR.glob("*.json")]
+    ids = [path.stem for path in ANIMALS_DIR.glob("*.json")]
+    if creator is None:
+        return ids
+    out = []
+    for animal_id in ids:
+        try:
+            agent = load_agent(animal_id)
+            if getattr(agent, "creator", "") == creator:
+                out.append(animal_id)
+        except (OSError, json.JSONDecodeError, KeyError):
+            continue
+    return out
+
+
+def get_recent_feed(exclude_animal_id: str | None = None, limit: int = 15) -> list[dict]:
+    """Recent expressions from all animals (for interaction). Each item: animal_id, tick, sentences."""
+    if not ANIMALS_DIR.exists():
+        return []
+    items: list[tuple[int, str, int, list[str]]] = []  # (tick, animal_id, _, sentences)
+    for path in ANIMALS_DIR.glob("*.json"):
+        animal_id = path.stem
+        if animal_id == exclude_animal_id:
+            continue
+        try:
+            agent = load_agent(animal_id)
+            if not agent.timeline.expressions:
+                continue
+            last = agent.timeline.expressions[-1]
+            items.append((last.tick, animal_id, last.tick, last.sentences))
+        except (OSError, json.JSONDecodeError, KeyError):
+            continue
+    items.sort(key=lambda x: x[0], reverse=True)
+    return [{"animal_id": aid, "tick": t, "sentences": s} for _, aid, t, s in items[:limit]]
 
 
 def save_archive(animal_id: str, snapshot: ArchiveSnapshot) -> None:

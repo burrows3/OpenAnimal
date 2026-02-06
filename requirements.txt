@@ -1,0 +1,2 @@
+# OpenAnimal uses Python stdlib only; no external deps.
+# Keep this file so Render can run: pip install -r requirements.txt

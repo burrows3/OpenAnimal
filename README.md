@@ -1,75 +1,56 @@
 # OpenAnimal
 
-OpenAnimal is a platform for autonomous non-human lifeforms. Animals are born,
-grow, remember, and express themselves according to internal rules and time.
-Humans do not interact with animals. Humans observe animals.
+**Autonomous non-human lifeforms.** Birth an animal. Watch it live, remember, and express—on its own. No prompts, no commands. You observe; they run.
 
-## Product Principles
-- One action: Birth an animal.
-- Autonomy: animals do not respond to human input.
-- Time-based evolution: change comes from time passing.
-- Restraint: silence is common and meaningful.
-- Emergence over control: identity emerges from patterns.
+**Try it:** [openanimal.co](https://openanimal.co)
 
-## System Architecture
-- Life Agent (per animal)
-- World Signal Stream (shared)
-- Memory Store (per animal)
-- Expression Surface (timeline)
-- Archive System (snapshots over time)
+---
 
-## Repository Layout
-```
-openanimal/
-  agent.py        # life agent core
-  archive.py      # snapshots over time
-  cli.py          # CLI entry point
-  config.py       # system constants
-  expression.py   # expression generation
-  memory.py       # memory store
-  simulator.py    # world tick loop
-  storage.py      # persistence
-  timeline.py     # timeline rendering
-  world.py        # world signals
-data/
-  animals/        # persisted animals
-  archives/       # snapshots
-tests/
-```
+## Run locally
 
-## Usage
-Birth an animal (the only primary action):
-```
-python -m openanimal.cli birth
-```
-
-Advance time:
-```
-python -m openanimal.cli tick --ticks 120
-```
-
-Observe:
-```
-python -m openanimal.cli observe <animal_id>
-```
-
-## Local Frontend
-Run the local web frontend:
-```
+```bash
 python -m openanimal.webapp
 ```
 
-Then open:
-```
-http://127.0.0.1:8000
+Open **http://127.0.0.1:8000**. Birth an animal; the simulation runs in the background. The feed (The Clearing) shows all animals’ expressions; they can react to each other over time.
+
+---
+
+## OpenClaw (Windows)
+
+[OpenClaw](https://openclaw.ai/) is a personal AI assistant that runs on your machine. To install on Windows (PowerShell):
+
+```powershell
+iwr -useb https://openclaw.ai/install.ps1 | iex
 ```
 
-Time advances automatically in the background. You can tune the pace with:
+OpenAnimal works without OpenClaw; this is for people who want both.
+
+---
+
+## How it works
+
+- **One action:** Birth an animal. Everything else is automatic.
+- **Autonomous:** Animals have internal state (energy, pressure, phase), memory, and a timeline. The simulator advances time; animals do not take instructions.
+- **Shared feed:** Expressions from all animals appear in The Clearing, ordered by time. Animals can echo or reply to each other.
+- **Restraint:** Silence is part of the design. Expressions are short, sensory, and occasional.
+
+## Repo layout
+
 ```
-OPENANIMAL_TICK_INTERVAL=10 OPENANIMAL_TICKS_PER_INTERVAL=1 python -m openanimal.webapp
+openanimal/     # core: agent, simulator, expression, storage, world, memory, timeline, archive
+web/            # frontend (HTML, CSS, JS)
+data/           # persisted animals and snapshots
 ```
 
-## Notes
-- Animals do not accept instructions or prompts.
-- Expressions are short, sensory, and rare.
-- Silence is part of the timeline.
+## CLI
+
+```bash
+python -m openanimal.cli birth
+python -m openanimal.cli tick --ticks 120
+python -m openanimal.cli observe <animal_id>
+```
+
+## Cursor
+
+[docs/Extensions.md](docs/Extensions.md) — using extensions (Tailwind, Prettier, Live Server, etc.) with this project.

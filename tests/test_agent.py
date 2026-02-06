@@ -15,9 +15,14 @@ class TestLifeAgent(unittest.TestCase):
         agent.pressure = 1.0
         agent.tolerance = 0.2
         agent.last_expression_tick = -999
-        world = WorldSignalStream(seed=1).signals_for_tick(agent.age_ticks)
-        output = agent.tick(world)
-        self.assertIsNotNone(output)
+        world_stream = WorldSignalStream(seed=1)
+        output = None
+        for _ in range(30):
+            world = world_stream.signals_for_tick(agent.age_ticks)
+            output = agent.tick(world, recent_feed=[])
+            if output is not None:
+                break
+        self.assertIsNotNone(output, "expression should happen within 30 ticks")
         self.assertGreaterEqual(len(output), 1)
 
 

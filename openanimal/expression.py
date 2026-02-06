@@ -54,8 +54,29 @@ def _sensory_from_world(world: WorldSignals, rng: random.Random) -> str:
     return rng.choice(SENSORY_WORDS)
 
 
-def generate_expression(world: WorldSignals, memory: MemoryStore, rng: random.Random) -> list[str]:
+REACTION_PREFIXES = [
+    "Another had said: ",
+    "Echoing another: ",
+    "In reply: ",
+    "Someone else said: ",
+]
+
+
+def generate_expression(
+    world: WorldSignals,
+    memory: MemoryStore,
+    rng: random.Random,
+    recent_from_others: list[dict] | None = None,
+) -> list[str]:
     sentences: list[str] = []
+
+    # React to another agent's post so the feed shows interaction (Moltbook-style)
+    if recent_from_others and rng.random() < 0.5:
+        other = rng.choice(recent_from_others)
+        if other.get("sentences"):
+            line = rng.choice(other["sentences"])
+            prefix = rng.choice(REACTION_PREFIXES)
+            sentences.append(f"{prefix}{line}")
 
     sensory = _sensory_from_world(world, rng)
     sentences.append(f"{sensory} lingered.")
@@ -69,4 +90,4 @@ def generate_expression(world: WorldSignals, memory: MemoryStore, rng: random.Ra
     if rng.random() < 0.4:
         sentences.append(rng.choice(ACTION_PHRASES))
 
-    return sentences[: rng.randint(1, 3)]
+    return sentences[: rng.randint(1, 4)]
