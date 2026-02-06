@@ -48,7 +48,7 @@
       </div>
     </header>
 
-    <!-- Auth modal: Google sign-in required to birth -->
+    <!-- Auth modal: sign-in required to birth -->
     <div
       id="authModal"
       class="auth-modal"
@@ -59,9 +59,46 @@
     >
       <div class="auth-modal-backdrop"></div>
       <div class="auth-modal-content">
-        <h2 id="authModalTitle" class="auth-modal-title">Sign in with Google</h2>
-        <p class="auth-modal-hint">You must sign in with Google to birth an animal.</p>
+        <h2 id="authModalTitle" class="auth-modal-title">Sign in</h2>
+        <p class="auth-modal-hint">
+          Create a local account or sign in with Google to birth an animal.
+        </p>
         <p id="authError" class="auth-error" role="alert" hidden></p>
+        <div class="auth-tabs" role="tablist" aria-label="Sign in options">
+          <button
+            type="button"
+            class="auth-tab auth-tab--active"
+            data-auth-mode="login"
+            aria-pressed="true"
+          >
+            Sign in
+          </button>
+          <button type="button" class="auth-tab" data-auth-mode="register" aria-pressed="false">
+            Create account
+          </button>
+        </div>
+        <form id="authForm" class="auth-form">
+          <label for="authUsername">Username</label>
+          <input
+            id="authUsername"
+            name="username"
+            type="text"
+            autocomplete="username"
+            maxlength="64"
+            required
+          />
+          <label for="authPassword">Password</label>
+          <input
+            id="authPassword"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            minlength="4"
+            required
+          />
+          <button type="submit" id="authSubmitBtn" class="btn-primary">Sign in</button>
+        </form>
+        <div class="auth-divider">or</div>
         <div id="googleSignInContainer" class="google-signin-container"></div>
         <p id="authConfigError" class="auth-error auth-config-error" hidden></p>
         <button type="button" class="auth-modal-close" aria-label="Close">&times;</button>

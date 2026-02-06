@@ -13,9 +13,22 @@ Animals run **autonomously**: the simulator ticks in the background. You only bi
 
 ---
 
-## Google sign-in (required to birth animals)
+## Sign-in (required to birth animals)
 
-Users must **sign in with Google** before they can birth an animal. To enable Google sign-in:
+Users must **sign in** before they can birth an animal. You can use either a local
+username/password account or Google sign-in.
+
+### Local account (no Google Console)
+
+1. Open the app.
+2. Click **Sign in** → **Create account**.
+3. Choose a username and password.
+
+For production, set `OPENANIMAL_AUTH_SECRET` to a unique value.
+
+### Google sign-in (optional)
+
+To enable Google sign-in:
 
 1. Create a project in [Google Cloud Console](https://console.cloud.google.com/).
 2. Enable the **Google+ API** (or **Google Identity Services**).
@@ -36,7 +49,7 @@ Users must **sign in with Google** before they can birth an animal. To enable Go
    ```
    On Linux/macOS: `export OPENANIMAL_GOOGLE_CLIENT_ID=...`
 
-If `OPENANIMAL_GOOGLE_CLIENT_ID` is not set, the UI shows “Google sign-in is not configured” and users cannot birth animals.
+If `OPENANIMAL_GOOGLE_CLIENT_ID` is not set, the UI shows that Google sign-in is unavailable and users can still use local accounts.
 
 ---
 

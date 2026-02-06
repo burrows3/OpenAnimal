@@ -12,6 +12,7 @@ const state = {
   user: null,
   token: null,
   googleClientId: "",
+  authMode: "login",
 };
 
 function getAuthToken() {
@@ -544,11 +545,105 @@ function renderAuthStatus() {
     birthButton.disabled = false;
     if (birthButtonHero) birthButtonHero.disabled = false;
   } else {
-    el.innerHTML =
-      '<button type="button" id="signInBtn" class="btn-secondary">Sign in with Google</button>';
+    el.innerHTML = '<button type="button" id="signInBtn" class="btn-secondary">Sign in</button>';
     document.getElementById("signInBtn")?.addEventListener("click", () => openAuthModal());
     birthButton.disabled = true;
     if (birthButtonHero) birthButtonHero.disabled = true;
+  }
+}
+
+function setAuthMode(mode) {
+  state.authMode = mode === "register" ? "register" : "login";
+  const tabs = document.querySelectorAll(".auth-tab");
+  tabs.forEach((tab) => {
+    const tabMode = tab.getAttribute("data-auth-mode");
+    const isActive = tabMode === state.authMode;
+    tab.classList.toggle("auth-tab--active", isActive);
+    tab.setAttribute("aria-pressed", isActive ? "true" : "false");
+  });
+  const title = document.getElementById("authModalTitle");
+  if (title) {
+    title.textContent = state.authMode === "register" ? "Create account" : "Sign in";
+  }
+  const submitBtn = document.getElementById("authSubmitBtn");
+  if (submitBtn) {
+    submitBtn.textContent = state.authMode === "register" ? "Create account" : "Sign in";
+  }
+  const passwordInput = document.getElementById("authPassword");
+  if (passwordInput) {
+    passwordInput.autocomplete =
+      state.authMode === "register" ? "new-password" : "current-password";
+  }
+}
+
+async function submitAuthForm() {
+  const errEl = document.getElementById("authError");
+  const submitBtn = document.getElementById("authSubmitBtn");
+  const usernameInput = document.getElementById("authUsername");
+  const passwordInput = document.getElementById("authPassword");
+  const username = (usernameInput?.value || "").trim();
+  const password = passwordInput?.value || "";
+
+  if (errEl) errEl.hidden = true;
+  if (!username || !password) {
+    if (errEl) {
+      errEl.textContent = "Username and password required.";
+      errEl.hidden = false;
+    }
+    return;
+  }
+  if (state.authMode === "register" && password.length < 4) {
+    if (errEl) {
+      errEl.textContent = "Password must be at least 4 characters.";
+      errEl.hidden = false;
+    }
+    return;
+  }
+
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = state.authMode === "register" ? "Creating..." : "Signing in...";
+  }
+
+  const endpoint = state.authMode === "register" ? "/api/auth/register" : "/api/auth/login";
+  try {
+    const data = await fetchJson(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+    setAuthToken(data.token);
+    state.token = data.token;
+    state.user = { user_id: data.user_id, username: data.username };
+    state.creatorId = state.user.user_id;
+    closeAuthModal();
+    renderAuthStatus();
+    await loadYourAnimals();
+  } catch (err) {
+    if (errEl) {
+      errEl.textContent = err.payload?.error || "Sign-in failed.";
+      errEl.hidden = false;
+    }
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = state.authMode === "register" ? "Create account" : "Sign in";
+    }
+  }
+}
+
+function initAuthModal() {
+  document.querySelectorAll(".auth-tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      setAuthMode(tab.getAttribute("data-auth-mode"));
+    });
+  });
+  const form = document.getElementById("authForm");
+  if (form) {
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      submitAuthForm();
+    });
   }
 }
 
@@ -573,8 +668,7 @@ function renderGoogleSignInButton(container) {
   if (typeof google === "undefined" || !google.accounts || !google.accounts.id) {
     const configErr = document.getElementById("authConfigError");
     if (configErr) {
-      configErr.textContent =
-        "Google sign-in is not configured. Set OPENANIMAL_GOOGLE_CLIENT_ID on the server.";
+      configErr.textContent = "Google sign-in could not be loaded. Use a local account instead.";
       configErr.hidden = false;
     }
     return;
@@ -625,6 +719,8 @@ function openAuthModal(message) {
   const errEl = document.getElementById("authError");
   const configErr = document.getElementById("authConfigError");
   const container = document.getElementById("googleSignInContainer");
+  const usernameInput = document.getElementById("authUsername");
+  const passwordInput = document.getElementById("authPassword");
   if (errEl) {
     if (message) {
       errEl.textContent = message;
@@ -635,14 +731,16 @@ function openAuthModal(message) {
   }
   if (configErr) configErr.hidden = true;
   if (container) container.innerHTML = "";
+  if (usernameInput) usernameInput.value = "";
+  if (passwordInput) passwordInput.value = "";
+  setAuthMode("login");
   if (modal) {
     modal.removeAttribute("hidden");
     modal.setAttribute("aria-hidden", "false");
   }
   if (!state.googleClientId) {
     if (configErr) {
-      configErr.textContent =
-        "Google sign-in is not configured. Set OPENANIMAL_GOOGLE_CLIENT_ID on the server.";
+      configErr.textContent = "Google sign-in is disabled on this server. Use a local account instead.";
       configErr.hidden = false;
     }
   } else {
@@ -677,6 +775,8 @@ document.querySelector(".auth-modal-close")?.addEventListener("click", closeAuth
 
 birthButton.addEventListener("click", birthAnimal);
 if (birthButtonHero) birthButtonHero.addEventListener("click", birthAnimal);
+
+initAuthModal();
 
 document.querySelectorAll(".filter-pill").forEach((btn) => {
   btn.addEventListener("click", () => {
