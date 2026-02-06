@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <style>
+    @keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+    @keyframes drift { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(2px); } }
+    .shell { animation: breathe 3.5s ease-in-out infinite; transform-origin: 32px 36px; }
+    .g { animation: drift 4s ease-in-out infinite; }
+  </style>
+  <g class="g">
+    <ellipse class="shell" cx="32" cy="36" rx="20" ry="14" fill="#22c55e" stroke="#15803d" stroke-width="2"/>
+    <path d="M16 32 Q32 22 48 32 Q32 42 16 32" fill="#16a34a" stroke="#15803d" stroke-width="1"/>
+    <ellipse cx="32" cy="28" rx="6" ry="5" fill="#86efac"/>
+    <circle cx="30" cy="27" r="1.5" fill="#1a1d21"/>
+    <circle cx="34" cy="27" r="1.5" fill="#1a1d21"/>
+  </g>
+</svg>

@@ -121,7 +121,13 @@ class LifeAgent:
         if self.age_ticks - self.last_expression_tick < EXPRESSION_COOLDOWN_TICKS:
             return None
 
-        if self.pressure >= self.tolerance and rng.random() < EXPRESSION_BASE_PROB:
+        # Social facilitation: more likely to express when others are active (real animal behavior)
+        feed_size = len(recent_feed or [])
+        expr_prob = EXPRESSION_BASE_PROB
+        if feed_size >= 2:
+            expr_prob = min(0.5, expr_prob + 0.08 * feed_size)
+
+        if self.pressure >= self.tolerance and rng.random() < expr_prob:
             sentences = generate_expression(
                 world, self.memory, rng, recent_from_others=recent_feed or []
             )

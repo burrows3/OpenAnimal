@@ -1,3 +1,5 @@
+const AUTH_TOKEN_KEY = "openanimal_token";
+
 const state = {
   animals: [],
   yourAnimals: [],
@@ -7,20 +9,31 @@ const state = {
   refreshTimer: null,
   creatorId: "",
   currentMaxTick: 0,
+  user: null,
+  token: null,
+  googleClientId: "",
 };
 
-function getOrCreateCreatorId() {
-  const key = "openanimal_creator";
+function getAuthToken() {
   try {
-    let id = localStorage.getItem(key);
-    if (!id) {
-      id = "user_" + Math.random().toString(36).slice(2, 10);
-      localStorage.setItem(key, id);
-    }
-    return id;
+    return localStorage.getItem(AUTH_TOKEN_KEY);
   } catch (_) {
-    return "anon_" + Math.random().toString(36).slice(2, 8);
+    return null;
   }
+}
+
+function setAuthToken(token) {
+  try {
+    if (token) localStorage.setItem(AUTH_TOKEN_KEY, token);
+    else localStorage.removeItem(AUTH_TOKEN_KEY);
+  } catch (_) {}
+}
+
+function clearAuth() {
+  state.token = null;
+  state.user = null;
+  state.creatorId = "";
+  setAuthToken(null);
 }
 
 function creatorLabel(creator) {
@@ -59,6 +72,8 @@ const ANIMAL_EMOJIS = [
   "🐜",
 ];
 
+const ANIMAL_SVG_NAMES = ["bird", "fox", "turtle", "owl", "snail", "lizard"];
+
 function hashId(id) {
   let h = 0;
   for (let i = 0; i < id.length; i++) {
@@ -72,11 +87,38 @@ function getAnimalEmoji(animalId) {
   return ANIMAL_EMOJIS[hashId(animalId) % ANIMAL_EMOJIS.length];
 }
 
-async function fetchJson(url, options) {
-  const response = await fetch(url, options);
+function getAnimalSvgName(animalId) {
+  return ANIMAL_SVG_NAMES[hashId(animalId) % ANIMAL_SVG_NAMES.length];
+}
+
+function createAnimalAvatar(animalId, className, useSvg = true) {
+  if (useSvg) {
+    const name = getAnimalSvgName(animalId);
+    const img = document.createElement("img");
+    img.src = "assets/animals/" + name + ".svg";
+    img.alt = name;
+    img.className = className || "animal-avatar-svg";
+    img.loading = "lazy";
+    return img;
+  }
+  const span = document.createElement("span");
+  span.className = className || "animal-avatar-emoji";
+  span.textContent = getAnimalEmoji(animalId);
+  return span;
+}
+
+async function fetchJson(url, options = {}, requireAuth = false) {
+  const headers = { ...(options.headers || {}) };
+  if (requireAuth && state.token) {
+    headers["Authorization"] = "Bearer " + state.token;
+  }
+  const response = await fetch(url, { ...options, headers });
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
-    throw new Error(payload.error || "request_failed");
+    const err = new Error(payload.error || payload.message || "request_failed");
+    err.status = response.status;
+    err.payload = payload;
+    throw err;
   }
   return response.json();
 }
@@ -133,11 +175,16 @@ function renderHeroGallery() {
   heroGallery.innerHTML = "";
 
   if (state.animals.length === 0) {
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 6; i++) {
       const placeholder = document.createElement("div");
-      placeholder.className = "gallery-placeholder";
-      const pos = GALLERY_POSITIONS[i];
-      Object.assign(placeholder.style, pos);
+      placeholder.className = "gallery-placeholder gallery-placeholder--animal";
+      placeholder.style.animationDelay = `${i * 0.12}s`;
+      const name = ANIMAL_SVG_NAMES[i % ANIMAL_SVG_NAMES.length];
+      const img = document.createElement("img");
+      img.src = "assets/animals/" + name + ".svg";
+      img.alt = name;
+      img.className = "gallery-placeholder-emoji";
+      placeholder.appendChild(img);
       heroGallery.appendChild(placeholder);
     }
     return;
@@ -152,10 +199,12 @@ function renderHeroGallery() {
     }
     card.style.animationDelay = `${index * 0.08}s`;
     Object.assign(card.style, pos);
+    setTimeout(() => card.classList.add("appeared"), 600 + index * 80);
 
     const avatar = document.createElement("div");
     avatar.className = "gallery-card-avatar";
-    avatar.textContent = getAnimalEmoji(animal.animal_id);
+    const av = createAnimalAvatar(animal.animal_id, "gallery-card-avatar-img", true);
+    avatar.appendChild(av);
     card.appendChild(avatar);
     const idEl = document.createElement("div");
     idEl.className = "card-id";
@@ -178,9 +227,11 @@ function renderAnimals() {
   if (list.length === 0) {
     const empty = document.createElement("div");
     empty.className = "muted";
-    empty.textContent = state.creatorId
-      ? "You haven’t birthed any yet. Birth one above."
-      : "No animals yet.";
+    if (!state.user) {
+      empty.textContent = "Sign in to birth and see your agents.";
+    } else {
+      empty.textContent = "You haven't birthed any yet. Birth one above.";
+    }
     animalList.appendChild(empty);
     return;
   }
@@ -292,7 +343,8 @@ function renderFeed() {
     if (maxTick - post.tick <= 2) el.classList.add("feed-post-new");
     const avatar = document.createElement("div");
     avatar.className = "feed-post-avatar";
-    avatar.textContent = getAnimalEmoji(post.animal_id);
+    const av = createAnimalAvatar(post.animal_id, "feed-post-avatar-img", true);
+    avatar.appendChild(av);
     const body = document.createElement("div");
     body.className = "feed-post-body";
     const meta = document.createElement("div");
@@ -333,7 +385,8 @@ function renderForumSidebar() {
     if (state.selectedId === animal.animal_id) row.classList.add("selected");
     const avatar = document.createElement("div");
     avatar.className = "avatar";
-    avatar.textContent = getAnimalEmoji(animal.animal_id);
+    const av = createAnimalAvatar(animal.animal_id, "forum-avatar-img", true);
+    avatar.appendChild(av);
     const by = animal.creator ? ` · ${creatorLabel(animal.creator)}` : "";
     const info = document.createElement("div");
     info.innerHTML = `<div class="name">${shortId(
@@ -411,21 +464,35 @@ function setBirthLoading(loading) {
 }
 
 async function birthAnimal() {
+  if (!state.user || !state.token) {
+    openAuthModal("Sign in with Google to birth an animal.");
+    return;
+  }
   setBirthLoading(true);
   birthMessage.textContent = "Creating...";
   try {
-    const data = await fetchJson("/api/animals/birth", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ creator: state.creatorId }),
-    });
+    const data = await fetchJson(
+      "/api/animals/birth",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      },
+      true
+    );
     birthMessage.textContent = `Born: ${shortId(data.animal_id)}`;
     await loadAnimals();
     await loadYourAnimals();
     await loadFeed();
     await selectAnimal(data.animal_id);
   } catch (error) {
-    birthMessage.textContent = "Birth failed.";
+    if (error.status === 401) {
+      clearAuth();
+      renderAuthStatus();
+      openAuthModal("Sign in to birth an animal.");
+    } else {
+      birthMessage.textContent = error.payload?.message || "Birth failed.";
+    }
   } finally {
     setBirthLoading(false);
   }
@@ -442,6 +509,171 @@ function startAutoRefresh() {
     await loadSelection();
   }, 5000);
 }
+
+async function loadAuth() {
+  state.token = getAuthToken();
+  if (!state.token) {
+    clearAuth();
+    return;
+  }
+  try {
+    const data = await fetchJson("/api/auth/me", {
+      headers: { Authorization: "Bearer " + state.token },
+    });
+    state.user = { user_id: data.user_id, username: data.username };
+    state.creatorId = state.user.user_id;
+  } catch (_) {
+    clearAuth();
+  }
+}
+
+function renderAuthStatus() {
+  const el = document.getElementById("authStatus");
+  if (!el) return;
+  if (state.user) {
+    el.innerHTML = `<span class="auth-username">${escapeHtml(
+      state.user.username
+    )}</span> <button type="button" id="signOutBtn" class="btn-secondary btn-text">Sign out</button>`;
+    const signOutBtn = document.getElementById("signOutBtn");
+    if (signOutBtn)
+      signOutBtn.addEventListener("click", () => {
+        clearAuth();
+        renderAuthStatus();
+        loadYourAnimals();
+      });
+    birthButton.disabled = false;
+    if (birthButtonHero) birthButtonHero.disabled = false;
+  } else {
+    el.innerHTML =
+      '<button type="button" id="signInBtn" class="btn-secondary">Sign in with Google</button>';
+    document.getElementById("signInBtn")?.addEventListener("click", () => openAuthModal());
+    birthButton.disabled = true;
+    if (birthButtonHero) birthButtonHero.disabled = true;
+  }
+}
+
+function escapeHtml(s) {
+  const div = document.createElement("div");
+  div.textContent = s;
+  return div.innerHTML;
+}
+
+async function loadConfig() {
+  try {
+    const data = await fetchJson("/api/config");
+    state.googleClientId = (data.google_client_id || "").trim();
+  } catch (_) {
+    state.googleClientId = "";
+  }
+}
+
+function renderGoogleSignInButton(container) {
+  if (!container || !state.googleClientId) return;
+  container.innerHTML = "";
+  if (typeof google === "undefined" || !google.accounts || !google.accounts.id) {
+    const configErr = document.getElementById("authConfigError");
+    if (configErr) {
+      configErr.textContent =
+        "Google sign-in is not configured. Set OPENANIMAL_GOOGLE_CLIENT_ID on the server.";
+      configErr.hidden = false;
+    }
+    return;
+  }
+  const configErr = document.getElementById("authConfigError");
+  if (configErr) configErr.hidden = true;
+  google.accounts.id.initialize({
+    client_id: state.googleClientId,
+    callback: async (response) => {
+      const errEl = document.getElementById("authError");
+      if (errEl) {
+        errEl.hidden = true;
+      }
+      try {
+        const res = await fetch("/api/auth/google", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ credential: response.credential }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw { status: res.status, payload: data };
+        setAuthToken(data.token);
+        state.token = data.token;
+        state.user = { user_id: data.user_id, username: data.username };
+        state.creatorId = state.user.user_id;
+        closeAuthModal();
+        renderAuthStatus();
+        await loadYourAnimals();
+      } catch (err) {
+        if (errEl) {
+          errEl.textContent = err.payload?.error || "Sign-in failed.";
+          errEl.hidden = false;
+        }
+      }
+    },
+  });
+  google.accounts.id.renderButton(container, {
+    type: "standard",
+    theme: "filled_blue",
+    size: "large",
+    text: "signin_with",
+    width: 280,
+  });
+}
+
+function openAuthModal(message) {
+  const modal = document.getElementById("authModal");
+  const errEl = document.getElementById("authError");
+  const configErr = document.getElementById("authConfigError");
+  const container = document.getElementById("googleSignInContainer");
+  if (errEl) {
+    if (message) {
+      errEl.textContent = message;
+      errEl.hidden = false;
+    } else {
+      errEl.hidden = true;
+    }
+  }
+  if (configErr) configErr.hidden = true;
+  if (container) container.innerHTML = "";
+  if (modal) {
+    modal.removeAttribute("hidden");
+    modal.setAttribute("aria-hidden", "false");
+  }
+  if (!state.googleClientId) {
+    if (configErr) {
+      configErr.textContent =
+        "Google sign-in is not configured. Set OPENANIMAL_GOOGLE_CLIENT_ID on the server.";
+      configErr.hidden = false;
+    }
+  } else {
+    if (typeof google !== "undefined" && google.accounts && google.accounts.id) {
+      renderGoogleSignInButton(container);
+    } else {
+      const script = document.createElement("script");
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      script.onload = () => renderGoogleSignInButton(container);
+      document.head.appendChild(script);
+    }
+  }
+}
+
+function closeAuthModal() {
+  const modal = document.getElementById("authModal");
+  const errEl = document.getElementById("authError");
+  const configErr = document.getElementById("authConfigError");
+  const container = document.getElementById("googleSignInContainer");
+  if (modal) {
+    modal.setAttribute("hidden", "");
+    modal.setAttribute("aria-hidden", "true");
+  }
+  if (errEl) errEl.hidden = true;
+  if (configErr) configErr.hidden = true;
+  if (container) container.innerHTML = "";
+}
+
+document.querySelector(".auth-modal-backdrop")?.addEventListener("click", closeAuthModal);
+document.querySelector(".auth-modal-close")?.addEventListener("click", closeAuthModal);
 
 birthButton.addEventListener("click", birthAnimal);
 if (birthButtonHero) birthButtonHero.addEventListener("click", birthAnimal);
@@ -460,10 +692,14 @@ document.querySelectorAll(".filter-pill").forEach((btn) => {
   });
 });
 
-state.creatorId = getOrCreateCreatorId();
-
-loadAnimals()
+loadConfig()
+  .then(() => loadAuth())
+  .then(() => renderAuthStatus())
+  .then(() => loadAnimals())
   .then(() => loadYourAnimals())
   .then(() => loadFeed())
   .then(() => loadSelection())
+  .then(() => {
+    renderAnimals();
+  })
   .then(() => startAutoRefresh());

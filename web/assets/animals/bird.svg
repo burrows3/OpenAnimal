@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <style>
+    @keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+    @keyframes wing { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+    @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+    .body { animation: breathe 2.5s ease-in-out infinite; transform-origin: 32px 36px; }
+    .wing { animation: wing 0.8s ease-in-out infinite; transform-origin: 28px 32px; }
+    .g { animation: bob 3s ease-in-out infinite; }
+  </style>
+  <g class="g">
+    <ellipse class="body" cx="32" cy="36" rx="14" ry="12" fill="#3b82f6" stroke="#1e40af" stroke-width="1.5"/>
+    <path class="wing" d="M22 32 Q18 28 20 24 Q24 26 28 30 Z" fill="#60a5fa" stroke="#1e40af" stroke-width="1"/>
+    <circle cx="32" cy="28" r="6" fill="#fbbf24"/>
+    <circle cx="30" cy="27" r="1.5" fill="#1a1d21"/>
+    <path d="M38 26 L42 24" stroke="#1a1d21" stroke-width="1" stroke-linecap="round"/>
+  </g>
+</svg>

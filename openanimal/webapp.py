@@ -11,6 +11,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from .agent import LifeAgent
+from .auth import auth_google, get_user_by_token, login, register
 from .simulator import Simulator
 from .storage import list_agents, load_agent, save_agent
 
@@ -128,14 +129,103 @@ class OpenAnimalHandler(BaseHTTPRequestHandler):
         posts.sort(key=lambda p: p["tick"], reverse=True)
         self._send_json({"posts": posts[:200]})
 
+    def _get_bearer_token(self) -> str | None:
+        auth = self.headers.get("Authorization") or ""
+        if auth.startswith("Bearer "):
+            return auth[7:].strip()
+        return None
+
+    def _api_auth_register(self, body: bytes | None) -> None:
+        if not body:
+            self._send_json({"error": "username and password required"}, status=400)
+            return
+        try:
+            data = json.loads(body.decode("utf-8"))
+            username = (data.get("username") or "").strip()
+            password = data.get("password") or ""
+        except (ValueError, UnicodeDecodeError):
+            self._send_json({"error": "invalid body"}, status=400)
+            return
+        result = register(username, password)
+        if result[0] is None:
+            self._send_json({"error": result[1]}, status=400)
+            return
+        user_id, token = result
+        user = get_user_by_token(token)
+        self._send_json({
+            "token": token,
+            "user_id": user_id,
+            "username": user["username"] if user else username,
+        })
+
+    def _api_auth_login(self, body: bytes | None) -> None:
+        if not body:
+            self._send_json({"error": "username and password required"}, status=400)
+            return
+        try:
+            data = json.loads(body.decode("utf-8"))
+            username = (data.get("username") or "").strip()
+            password = data.get("password") or ""
+        except (ValueError, UnicodeDecodeError):
+            self._send_json({"error": "invalid body"}, status=400)
+            return
+        result = login(username, password)
+        if result[0] is None:
+            self._send_json({"error": result[1]}, status=401)
+            return
+        token, user_id = result
+        user = get_user_by_token(token)
+        self._send_json({
+            "token": token,
+            "user_id": user_id,
+            "username": user["username"] if user else username,
+        })
+
+    def _api_auth_me(self) -> None:
+        token = self._get_bearer_token()
+        user = get_user_by_token(token) if token else None
+        if not user:
+            self._send_json({"error": "not_authenticated"}, status=401)
+            return
+        self._send_json({"user_id": user["id"], "username": user["username"]})
+
+    def _api_config(self) -> None:
+        """Public config for frontend (e.g. Google Client ID for sign-in)."""
+        self._send_json({
+            "google_client_id": os.environ.get("OPENANIMAL_GOOGLE_CLIENT_ID", "").strip(),
+        })
+
+    def _api_auth_google(self, body: bytes | None = None) -> None:
+        if not body:
+            self._send_json({"error": "id_token required"}, status=400)
+            return
+        try:
+            data = json.loads(body.decode("utf-8"))
+            id_token = (data.get("id_token") or data.get("credential") or "").strip()
+        except (ValueError, UnicodeDecodeError):
+            self._send_json({"error": "invalid body"}, status=400)
+            return
+        if not id_token:
+            self._send_json({"error": "id_token required"}, status=400)
+            return
+        result = auth_google(id_token)
+        if result[0] is None:
+            self._send_json({"error": result[1]}, status=401)
+            return
+        user_id, token, username = result
+        self._send_json({
+            "token": token,
+            "user_id": user_id,
+            "username": username,
+        })
+
     def _api_birth(self, body: bytes | None = None) -> None:
-        creator = ""
-        if body:
-            try:
-                data = json.loads(body.decode("utf-8"))
-                creator = (data.get("creator") or "").strip()[:128]
-            except (ValueError, UnicodeDecodeError):
-                pass
+        token = self._get_bearer_token()
+        user = get_user_by_token(token) if token else None
+        if not user:
+            self._send_json({"error": "sign_in_required", "message": "Sign in to birth an animal."}, status=401)
+            return
+        creator = user["id"]
         agent = LifeAgent.birth(creator=creator)
         save_agent(agent)
         self._send_json({"animal_id": agent.animal_id, "creator": agent.creator})
@@ -146,6 +236,12 @@ class OpenAnimalHandler(BaseHTTPRequestHandler):
 
         if path.startswith("/api/"):
             parts = path.strip("/").split("/")
+            if parts == ["api", "auth", "me"]:
+                self._api_auth_me()
+                return
+            if parts == ["api", "config"]:
+                self._api_config()
+                return
             if parts == ["api", "feed"]:
                 self._api_get_feed()
                 return
@@ -170,9 +266,18 @@ class OpenAnimalHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
+        length = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(length) if length else None
+        if parsed.path == "/api/auth/register":
+            self._api_auth_register(body)
+            return
+        if parsed.path == "/api/auth/login":
+            self._api_auth_login(body)
+            return
+        if parsed.path == "/api/auth/google":
+            self._api_auth_google(body)
+            return
         if parsed.path == "/api/animals/birth":
-            length = int(self.headers.get("Content-Length", 0))
-            body = self.rfile.read(length) if length else None
             self._api_birth(body=body)
             return
 

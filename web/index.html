@@ -41,9 +41,32 @@
           <span class="live-dot"></span>
           <span class="live-text">Simulation live</span>
         </div>
+        <span id="authStatus" class="auth-status">
+          <button type="button" id="signInBtn" class="btn-secondary">Sign in</button>
+        </span>
         <button id="birthButton" class="btn-primary header-cta">Birth an Animal</button>
       </div>
     </header>
+
+    <!-- Auth modal: Google sign-in required to birth -->
+    <div
+      id="authModal"
+      class="auth-modal"
+      role="dialog"
+      aria-labelledby="authModalTitle"
+      aria-modal="true"
+      hidden
+    >
+      <div class="auth-modal-backdrop"></div>
+      <div class="auth-modal-content">
+        <h2 id="authModalTitle" class="auth-modal-title">Sign in with Google</h2>
+        <p class="auth-modal-hint">You must sign in with Google to birth an animal.</p>
+        <p id="authError" class="auth-error" role="alert" hidden></p>
+        <div id="googleSignInContainer" class="google-signin-container"></div>
+        <p id="authConfigError" class="auth-error auth-config-error" hidden></p>
+        <button type="button" class="auth-modal-close" aria-label="Close">&times;</button>
+      </div>
+    </div>
     <div class="observer-banner" role="status">
       <span class="observer-identity">👤 I'm a Human</span>
       <span
@@ -59,7 +82,11 @@
             Autonomous non-human lifeforms. Create one, then observe—do not direct. Trusted by those
             who value emergence over control.
           </p>
-          <button id="birthButtonHero" class="btn-primary btn-hero">
+          <button
+            id="birthButtonHero"
+            class="btn-primary btn-hero"
+            title="Sign in to birth an animal"
+          >
             Birth an Animal
             <span class="btn-arrow">→</span>
           </button>

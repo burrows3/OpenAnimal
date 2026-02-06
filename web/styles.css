@@ -166,8 +166,178 @@ body {
   cursor: not-allowed;
 }
 
+.btn-secondary {
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background: #e2e8f0;
+}
+
+.btn-text {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  padding: 4px 8px;
+}
+
+.btn-text:hover {
+  color: #1a1d21;
+}
+
+.auth-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.auth-username {
+  font-size: 14px;
+  font-weight: 500;
+  color: #475569;
+}
+
 .header-cta {
   border-radius: 12px;
+}
+
+/* Auth modal */
+.auth-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  visibility: visible;
+  opacity: 1;
+}
+
+.auth-modal[hidden] {
+  display: none !important;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.auth-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.auth-modal-content {
+  position: relative;
+  background: #fff;
+  border-radius: 16px;
+  padding: 28px 32px;
+  max-width: 380px;
+  width: 100%;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+}
+
+.auth-modal-title {
+  margin: 0 0 4px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.auth-modal-hint {
+  margin: 0 0 20px;
+  font-size: 14px;
+  color: #64748b;
+}
+
+.auth-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+}
+
+.auth-tab {
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.auth-tab:hover {
+  color: #1a1d21;
+}
+
+.auth-tab--active {
+  background: #f1f5f9;
+  color: #1a1d21;
+}
+
+.auth-form label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+}
+
+.auth-form input {
+  width: 100%;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: 15px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-sizing: border-box;
+}
+
+.auth-form input:focus {
+  outline: none;
+  border-color: #2563eb;
+}
+
+.auth-error {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: #dc2626;
+}
+
+.google-signin-container {
+  margin: 16px 0;
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-config-error {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.auth-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #94a3b8;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.auth-modal-close:hover {
+  color: #1a1d21;
 }
 
 /* Hero */
@@ -322,6 +492,10 @@ body {
   animation: gallery-appear 0.5s ease-out backwards;
 }
 
+.gallery-card.appeared {
+  animation: gallery-float 5s ease-in-out infinite;
+}
+
 @keyframes gallery-appear {
   from {
     opacity: 0;
@@ -350,9 +524,26 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 36px;
-  line-height: 1;
+  overflow: hidden;
+}
+
+.gallery-card-avatar-img,
+.feed-post-avatar-img,
+.forum-avatar-img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
   animation: animal-breathe 3s ease-in-out infinite;
+}
+
+.feed-post-avatar-img {
+  width: 52px;
+  height: 52px;
+}
+
+.forum-avatar-img {
+  width: 44px;
+  height: 44px;
 }
 
 .gallery-card .card-id {
@@ -384,32 +575,70 @@ body {
 
 .gallery-placeholder {
   position: absolute;
-  width: 120px;
-  height: 120px;
-  background: #e2e8f0;
-  border-radius: 16px;
-  border: 2px dashed #cbd5e1;
+  width: 100px;
+  height: 100px;
+  background: #1a1d21;
+  border-radius: 50%;
+  border: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: gallery-float 5s ease-in-out infinite;
+}
+
+.gallery-placeholder-emoji {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  animation: animal-breathe 3s ease-in-out infinite;
 }
 
 .gallery-placeholder:nth-child(1) {
-  top: 10%;
-  left: 15%;
-  transform: rotate(-8deg);
+  top: 8%;
+  left: 12%;
+  animation-delay: 0s;
 }
 .gallery-placeholder:nth-child(2) {
-  top: 25%;
-  right: 20%;
-  transform: rotate(6deg);
+  top: 12%;
+  right: 18%;
+  left: auto;
+  animation-delay: 0.5s;
 }
 .gallery-placeholder:nth-child(3) {
-  bottom: 30%;
-  left: 20%;
-  transform: rotate(5deg);
+  top: 50%;
+  left: 8%;
+  margin-top: -50px;
+  animation-delay: 1s;
 }
 .gallery-placeholder:nth-child(4) {
-  bottom: 15%;
-  right: 15%;
-  transform: rotate(-5deg);
+  top: 45%;
+  right: 10%;
+  left: auto;
+  margin-top: -50px;
+  animation-delay: 1.5s;
+}
+.gallery-placeholder:nth-child(5) {
+  bottom: 18%;
+  left: 20%;
+  top: auto;
+  animation-delay: 2s;
+}
+.gallery-placeholder:nth-child(6) {
+  bottom: 12%;
+  right: 12%;
+  top: auto;
+  animation-delay: 2.5s;
+}
+
+@keyframes gallery-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
 .animal-card .card-avatar-wrap {
@@ -576,9 +805,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
-  line-height: 1;
-  animation: animal-breathe 4s ease-in-out infinite;
+  overflow: hidden;
 }
 
 .feed-post-body {
@@ -689,9 +916,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
-  line-height: 1;
-  animation: animal-breathe 4s ease-in-out infinite;
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
 .forum-animal-row .name {

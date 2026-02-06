@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <style>
+    @keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+    @keyframes tail { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(3deg); } }
+    .body { animation: breathe 2.8s ease-in-out infinite; transform-origin: 28px 32px; }
+    .tail { animation: tail 2s ease-in-out infinite; transform-origin: 12px 32px; }
+  </style>
+  <path class="body" d="M44 28 Q52 32 48 40 Q40 44 28 40 Q20 36 24 28 Q28 22 36 24 Z" fill="#65a30d" stroke="#4d7c0f" stroke-width="1.5"/>
+  <path class="tail" d="M24 32 L12 32 L8 28 L12 24 L16 28 Z" fill="#84cc16" stroke="#65a30d" stroke-width="1"/>
+  <circle cx="40" cy="30" r="3" fill="#1a1d21"/>
+  <path d="M48 36 L52 34 M46 40 L50 42" stroke="#4d7c0f" stroke-width="1" stroke-linecap="round"/>
+</svg>

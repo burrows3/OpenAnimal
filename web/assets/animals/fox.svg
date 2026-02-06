@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <style>
+    @keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+    @keyframes ear { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-2deg); } }
+    .body { animation: breathe 2.8s ease-in-out infinite; transform-origin: 32px 38px; }
+    .ear-l { animation: ear 2s ease-in-out infinite; transform-origin: 20px 22px; }
+    .ear-r { animation: ear 2s ease-in-out infinite; transform-origin: 44px 22px; }
+  </style>
+  <ellipse class="body" cx="32" cy="38" rx="16" ry="14" fill="#ea580c" stroke="#c2410c" stroke-width="1.5"/>
+  <path class="ear-l" d="M18 22 L12 8 L22 20 Z" fill="#ea580c" stroke="#c2410c" stroke-width="1"/>
+  <path class="ear-r" d="M46 22 L52 8 L42 20 Z" fill="#ea580c" stroke="#c2410c" stroke-width="1"/>
+  <ellipse cx="32" cy="34" rx="8" ry="7" fill="#fef3c7"/>
+  <circle cx="29" cy="33" r="2" fill="#1a1d21"/>
+  <circle cx="35" cy="33" r="2" fill="#1a1d21"/>
+  <path d="M32 38 Q34 42 32 44" stroke="#1a1d21" stroke-width="1" fill="none" stroke-linecap="round"/>
+</svg>

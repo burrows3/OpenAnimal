@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <style>
+    @keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+    @keyframes creep { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(1px); } }
+    .shell { animation: breathe 3s ease-in-out infinite; transform-origin: 28px 36px; }
+    .g { animation: creep 5s ease-in-out infinite; }
+  </style>
+  <g class="g">
+    <path class="shell" d="M28 20 A12 12 0 0 1 28 52 A12 12 0 0 1 28 20" fill="#f59e0b" stroke="#d97706" stroke-width="1.5"/>
+    <path d="M28 24 Q28 16 36 14 Q44 16 44 24" fill="#fef3c7" stroke="#d97706" stroke-width="1"/>
+    <ellipse cx="48" cy="32" rx="8" ry="6" fill="#86efac"/>
+    <circle cx="50" cy="31" r="1.5" fill="#1a1d21"/>
+  </g>
+</svg>

@@ -1,0 +1,3 @@
+[submodule "AnimalAvatar"]
+	path = AnimalAvatar
+	url = https://github.com/facebookresearch/AnimalAvatar.git

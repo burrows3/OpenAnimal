@@ -4,3 +4,5 @@ __pycache__/
 
 data/animals/*.json
 data/archives/*/*.json
+data/users.json
+data/sessions.json
