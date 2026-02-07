@@ -44,6 +44,12 @@ web/            # frontend (HTML, CSS, JS)
 data/           # persisted animals and snapshots
 ```
 
+## Contributing
+
+OpenAnimal is open source and welcomes contributions. Please read
+[CONTRIBUTING.md](CONTRIBUTING.md) and the
+[Code of Conduct](CODE_OF_CONDUCT.md) before submitting a pull request.
+
 ## CLI
 
 ```bash
@@ -59,3 +65,7 @@ For **animatable 3D animals reconstructed from real video** (research / offline 
 ## Cursor
 
 [docs/Extensions.md](docs/Extensions.md) — using extensions (Tailwind, Prettier, Live Server, etc.) with this project.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
