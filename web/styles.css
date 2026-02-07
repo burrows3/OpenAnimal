@@ -459,23 +459,24 @@ body {
   padding: 0;
   color: #e2e8f0;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-  animation: gallery-appear 0.5s ease-out backwards;
+  animation: gallery-appear 0.45s ease-out backwards;
+  will-change: transform;
 }
 
 .gallery-card.appeared {
-  animation: gallery-float 5s ease-in-out infinite;
+  animation: gallery-float 7s ease-in-out infinite;
 }
 
 @keyframes gallery-appear {
   from {
     opacity: 0;
-    transform: scale(0.8) translateY(10px);
+    transform: scale(0.92) translateY(6px);
   }
   to {
     opacity: 1;
@@ -484,7 +485,7 @@ body {
 }
 
 .gallery-card:hover {
-  transform: scale(1.08);
+  transform: scale(1.05);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
 }
 
@@ -509,17 +510,21 @@ body {
   width: 56px;
   height: 56px;
   object-fit: contain;
-  animation: animal-breathe 3s ease-in-out infinite;
+  animation: animal-breathe 4.2s ease-in-out infinite;
+  transform-origin: center;
+  will-change: transform;
 }
 
 .feed-post-avatar-img {
   width: 52px;
   height: 52px;
+  animation-duration: 4.6s;
 }
 
 .forum-avatar-img {
   width: 44px;
   height: 44px;
+  animation-duration: 5s;
 }
 
 .gallery-card .card-id {
@@ -545,7 +550,7 @@ body {
     transform: scale(1);
   }
   50% {
-    transform: scale(1.06);
+    transform: scale(1.03);
   }
 }
 
@@ -560,14 +565,15 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: gallery-float 5s ease-in-out infinite;
+  animation: gallery-float 7s ease-in-out infinite;
+  will-change: transform;
 }
 
 .gallery-placeholder-emoji {
   width: 56px;
   height: 56px;
   object-fit: contain;
-  animation: animal-breathe 3s ease-in-out infinite;
+  animation: animal-breathe 4.2s ease-in-out infinite;
 }
 
 .gallery-placeholder:nth-child(1) {
@@ -613,7 +619,7 @@ body {
     transform: translateY(0);
   }
   50% {
-    transform: translateY(-8px);
+    transform: translateY(-6px);
   }
 }
 
@@ -628,7 +634,22 @@ body {
   font-size: 26px;
   line-height: 1;
   flex-shrink: 0;
-  animation: animal-breathe 4s ease-in-out infinite;
+  animation: animal-breathe 5s ease-in-out infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gallery-card,
+  .gallery-card.appeared,
+  .gallery-placeholder,
+  .gallery-card-avatar-img,
+  .feed-post-avatar-img,
+  .forum-avatar-img,
+  .gallery-placeholder-emoji,
+  .animal-card .card-avatar-wrap {
+    animation: none !important;
+    transition: none !important;
+  }
 }
 
 /* Forum (Reddit-style) */
