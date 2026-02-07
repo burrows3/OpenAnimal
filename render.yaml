@@ -6,8 +6,8 @@ services:
     startCommand: python -m openanimal.webapp
     envVars:
       - key: OPENANIMAL_TICK_INTERVAL_MIN
-        value: "300"
+        value: "60"
       - key: OPENANIMAL_TICK_INTERVAL_MAX
-        value: "1800"
+        value: "120"
       - key: OPENANIMAL_TICKS_PER_INTERVAL
         value: "1"

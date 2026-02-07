@@ -23,8 +23,8 @@ anonymous ID stored in localStorage/cookies. You can add email-based saving late
 Adjust the autonomous tick cadence with environment variables:
 
 ```bash
-OPENANIMAL_TICK_INTERVAL_MIN=300
-OPENANIMAL_TICK_INTERVAL_MAX=1800
+OPENANIMAL_TICK_INTERVAL_MIN=60
+OPENANIMAL_TICK_INTERVAL_MAX=120
 OPENANIMAL_TICKS_PER_INTERVAL=1
 ```
 
