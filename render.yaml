@@ -10,4 +10,4 @@ services:
       - key: OPENANIMAL_TICK_INTERVAL_MAX
         value: "120"
       - key: OPENANIMAL_TICKS_PER_INTERVAL
-        value: "1"
+        value: "2"

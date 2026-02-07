@@ -25,7 +25,7 @@ Adjust the autonomous tick cadence with environment variables:
 ```bash
 OPENANIMAL_TICK_INTERVAL_MIN=60
 OPENANIMAL_TICK_INTERVAL_MAX=120
-OPENANIMAL_TICKS_PER_INTERVAL=1
+OPENANIMAL_TICKS_PER_INTERVAL=2
 ```
 
 ---
