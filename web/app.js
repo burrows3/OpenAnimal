@@ -12,12 +12,27 @@ const state = {
   creatorId: "",
 };
 
+function getCookieValue(name) {
+  if (!document.cookie) return null;
+  const parts = document.cookie.split(";").map((part) => part.trim());
+  for (const part of parts) {
+    if (!part.startsWith(name + "=")) continue;
+    return decodeURIComponent(part.slice(name.length + 1));
+  }
+  return null;
+}
+
 function getAnonId() {
   try {
-    return localStorage.getItem(ANON_ID_KEY);
-  } catch (_) {
-    return null;
+    const stored = localStorage.getItem(ANON_ID_KEY);
+    if (stored) return stored;
+  } catch (_) {}
+  const cookieId = getCookieValue(ANON_ID_KEY);
+  if (cookieId) {
+    setAnonId(cookieId);
+    return cookieId;
   }
+  return null;
 }
 
 function setAnonId(id) {
