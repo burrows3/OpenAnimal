@@ -1,4 +1,5 @@
-const AUTH_TOKEN_KEY = "openanimal_token";
+const ANON_ID_KEY = "openanimal_anon_id";
+const LAST_SEEN_KEY = "openanimal_last_seen";
 
 const state = {
   animals: [],
@@ -7,43 +8,41 @@ const state = {
   feedSort: "new",
   selectedId: null,
   refreshTimer: null,
-  creatorId: "",
   currentMaxTick: 0,
-  user: null,
-  token: null,
-  supabaseUrl: "",
-  supabaseAnonKey: "",
-  supabaseRedirectUrl: "",
+  creatorId: "",
 };
 
-let supabaseClient = null;
-
-function getAuthToken() {
+function getAnonId() {
   try {
-    return localStorage.getItem(AUTH_TOKEN_KEY);
+    return localStorage.getItem(ANON_ID_KEY);
   } catch (_) {
     return null;
   }
 }
 
-function setAuthToken(token) {
+function setAnonId(id) {
   try {
-    if (token) localStorage.setItem(AUTH_TOKEN_KEY, token);
-    else localStorage.removeItem(AUTH_TOKEN_KEY);
+    localStorage.setItem(ANON_ID_KEY, id);
   } catch (_) {}
+  if (id) {
+    document.cookie = `openanimal_anon_id=${encodeURIComponent(id)}; path=/; max-age=31536000`;
+  }
 }
 
-function clearAuth() {
-  state.token = null;
-  state.user = null;
-  state.creatorId = "";
-  setAuthToken(null);
+function ensureAnonId() {
+  let id = getAnonId();
+  if (!id) {
+    id = "anon_" + Math.random().toString(36).slice(2, 10);
+    setAnonId(id);
+  }
+  state.creatorId = id;
+  return id;
 }
 
-function creatorLabel(creator) {
-  if (!creator || creator === "") return "Anonymous";
-  if (creator.length <= 12) return creator;
-  return creator.slice(0, 8) + "…";
+function updateLastSeen() {
+  try {
+    localStorage.setItem(LAST_SEEN_KEY, String(Date.now()));
+  } catch (_) {}
 }
 
 const birthButton = document.getElementById("birthButton");
@@ -95,9 +94,9 @@ function getAnimalSvgName(animalId) {
   return ANIMAL_SVG_NAMES[hashId(animalId) % ANIMAL_SVG_NAMES.length];
 }
 
-function createAnimalAvatar(animalId, className, useSvg = true) {
+function createAnimalAvatar(animalId, className, useSvg = true, species = "") {
   if (useSvg) {
-    const name = getAnimalSvgName(animalId);
+    const name = ANIMAL_SVG_NAMES.includes(species) ? species : getAnimalSvgName(animalId);
     const img = document.createElement("img");
     img.src = "assets/animals/" + name + ".svg";
     img.alt = name;
@@ -111,11 +110,8 @@ function createAnimalAvatar(animalId, className, useSvg = true) {
   return span;
 }
 
-async function fetchJson(url, options = {}, requireAuth = false) {
+async function fetchJson(url, options = {}) {
   const headers = { ...(options.headers || {}) };
-  if (requireAuth && state.token) {
-    headers["Authorization"] = "Bearer " + state.token;
-  }
   const response = await fetch(url, { ...options, headers });
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
@@ -158,12 +154,21 @@ function formatTimeAgo(tick) {
 
 function phaseLabel(phase) {
   const map = {
-    infancy: "Newborn",
-    early_growth: "Growing",
-    adolescence: "Young",
-    maturity: "Adult",
+    infancy: "Infant",
+    early_growth: "Juvenile",
+    adolescence: "Mature",
+    maturity: "Elder",
+    infant: "Infant",
+    juvenile: "Juvenile",
+    mature: "Mature",
+    elder: "Elder",
   };
   return map[phase] || phase;
+}
+
+function titleCase(value) {
+  if (!value) return "";
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 const GALLERY_POSITIONS = [
@@ -207,7 +212,7 @@ function renderHeroGallery() {
 
     const avatar = document.createElement("div");
     avatar.className = "gallery-card-avatar";
-    const av = createAnimalAvatar(animal.animal_id, "gallery-card-avatar-img", true);
+    const av = createAnimalAvatar(animal.animal_id, "gallery-card-avatar-img", true, animal.species);
     avatar.appendChild(av);
     card.appendChild(avatar);
     const idEl = document.createElement("div");
@@ -231,11 +236,7 @@ function renderAnimals() {
   if (list.length === 0) {
     const empty = document.createElement("div");
     empty.className = "muted";
-    if (!state.user) {
-      empty.textContent = "Sign in to birth and see your agents.";
-    } else {
-      empty.textContent = "You haven't birthed any yet. Birth one above.";
-    }
+    empty.textContent = "Birth an animal to begin.";
     animalList.appendChild(empty);
     return;
   }
@@ -258,9 +259,17 @@ function renderAnimals() {
 
     const meta = document.createElement("div");
     meta.className = "card-meta";
-    const by = animal.creator ? ` · ${creatorLabel(animal.creator)}` : "";
-    meta.textContent = `${phaseLabel(animal.phase)} · ${formatAge(animal.age_ticks)}${by}`;
+    meta.textContent = `${phaseLabel(animal.phase)} · ${formatAge(animal.age_ticks)}`;
     card.appendChild(meta);
+
+    if (animal.slug) {
+      const link = document.createElement("a");
+      link.href = "/a/" + animal.slug;
+      link.textContent = "Open profile";
+      link.className = "animal-link";
+      link.addEventListener("click", (event) => event.stopPropagation());
+      card.appendChild(link);
+    }
 
     const button = document.createElement("button");
     button.textContent = "Observe";
@@ -280,10 +289,10 @@ function renderDetails(details) {
 
   animalDetails.classList.remove("muted");
   animalDetails.innerHTML = `
-    <div><strong>Life stage:</strong> ${phaseLabel(details.phase)}</div>
+    <div><strong>Species:</strong> ${titleCase(details.species || "Unknown")}</div>
+    <div><strong>Stage:</strong> ${phaseLabel(details.phase)}</div>
     <div><strong>Age:</strong> ${formatAge(details.age_ticks)}</div>
-    <div><strong>Memories:</strong> ${details.memory_count}</div>
-    <div><strong>Expressions:</strong> ${details.expressions_count}</div>
+    <div><strong>Last observed:</strong> ${details.last_activity || "Quiet."}</div>
   `;
 }
 
@@ -322,9 +331,9 @@ function getSortedFeed() {
     return copy;
   }
   if (state.feedSort === "top") {
-    return copy.sort((a, b) => b.tick - a.tick);
+    return copy.sort((a, b) => (b.public_tick ?? b.tick) - (a.public_tick ?? a.tick));
   }
-  return copy.sort((a, b) => b.tick - a.tick);
+  return copy.sort((a, b) => (b.public_tick ?? b.tick) - (a.public_tick ?? a.tick));
 }
 
 function renderFeed() {
@@ -335,29 +344,30 @@ function renderFeed() {
     empty.className = "feed-empty";
     empty.innerHTML =
       state.animals.length < 2
-        ? "Birth 2 or more agents to see them post and react to each other. The simulation runs automatically."
-        : "No posts yet. Simulation is running—posts will appear as agents express.";
+        ? "Birth 2 or more agents to see them react to each other. The simulation runs quietly in the background."
+        : "No posts yet. The world is quiet right now.";
     feedList.appendChild(empty);
     return;
   }
   const maxTick = state.currentMaxTick || 0;
   feed.forEach((post) => {
+    const displayTick = post.public_tick ?? post.tick;
     const el = document.createElement("article");
     el.className = "feed-post";
-    if (maxTick - post.tick <= 2) el.classList.add("feed-post-new");
+    if (maxTick - displayTick <= 2) el.classList.add("feed-post-new");
     const avatar = document.createElement("div");
     avatar.className = "feed-post-avatar";
-    const av = createAnimalAvatar(post.animal_id, "feed-post-avatar-img", true);
+    const av = createAnimalAvatar(post.animal_id, "feed-post-avatar-img", true, post.species);
     avatar.appendChild(av);
     const body = document.createElement("div");
     body.className = "feed-post-body";
     const meta = document.createElement("div");
     meta.className = "feed-post-meta";
-    const by = post.creator ? ` · ${creatorLabel(post.creator)}` : "";
+    const speciesLabel = titleCase(post.species || "Animal");
     meta.innerHTML = `
-      <span class="feed-post-author">${shortId(post.animal_id)}${by}</span>
+      <span class="feed-post-author">${speciesLabel}</span>
       <span class="feed-post-phase">${phaseLabel(post.phase)}</span>
-      <span class="feed-post-time">· ${formatTimeAgo(post.tick)}</span>
+      <span class="feed-post-time">· ${formatTimeAgo(displayTick)}</span>
     `;
     const content = document.createElement("div");
     content.className = "feed-post-content";
@@ -366,7 +376,13 @@ function renderFeed() {
     body.appendChild(content);
     el.appendChild(avatar);
     el.appendChild(body);
-    el.addEventListener("click", () => selectAnimal(post.animal_id));
+    el.addEventListener("click", () => {
+      if (post.slug) {
+        window.location.href = "/a/" + post.slug;
+      } else {
+        selectAnimal(post.animal_id);
+      }
+    });
     feedList.appendChild(el);
   });
 }
@@ -389,15 +405,12 @@ function renderForumSidebar() {
     if (state.selectedId === animal.animal_id) row.classList.add("selected");
     const avatar = document.createElement("div");
     avatar.className = "avatar";
-    const av = createAnimalAvatar(animal.animal_id, "forum-avatar-img", true);
+    const av = createAnimalAvatar(animal.animal_id, "forum-avatar-img", true, animal.species);
     avatar.appendChild(av);
-    const by = animal.creator ? ` · ${creatorLabel(animal.creator)}` : "";
     const info = document.createElement("div");
-    info.innerHTML = `<div class="name">${shortId(
-      animal.animal_id
-    )}${by}</div><div class="phase">${phaseLabel(animal.phase)} · ${formatAge(
-      animal.age_ticks
-    )}</div>`;
+    info.innerHTML = `<div class="name">${titleCase(animal.species || "Animal")}</div><div class="phase">${phaseLabel(
+      animal.phase
+    )} · ${formatAge(animal.age_ticks)}</div>`;
     row.appendChild(avatar);
     row.appendChild(info);
     row.addEventListener("click", () => selectAnimal(animal.animal_id));
@@ -411,7 +424,7 @@ async function loadFeed() {
     const data = await fetchJson("/api/feed");
     state.feed = data.posts || [];
     if (state.feed.length) {
-      const maxTick = Math.max(...state.feed.map((p) => p.tick));
+      const maxTick = Math.max(...state.feed.map((p) => p.public_tick ?? p.tick));
       state.currentMaxTick = Math.max(maxTick, state.currentMaxTick || 0);
     }
     renderFeed();
@@ -435,7 +448,7 @@ async function loadAnimals() {
 }
 
 async function loadYourAnimals() {
-  if (!state.creatorId) return;
+  if (!state.creatorId) ensureAnonId();
   const data = await fetchJson("/api/animals?creator=" + encodeURIComponent(state.creatorId));
   state.yourAnimals = data.animals || [];
   renderAnimals();
@@ -468,35 +481,27 @@ function setBirthLoading(loading) {
 }
 
 async function birthAnimal() {
-  if (!state.user || !state.token) {
-      openAuthModal("Sign in to birth an animal.");
-    return;
-  }
+  const creatorId = ensureAnonId();
   setBirthLoading(true);
   birthMessage.textContent = "Creating...";
   try {
-    const data = await fetchJson(
-      "/api/animals/birth",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      },
-      true
-    );
-    birthMessage.textContent = `Born: ${shortId(data.animal_id)}`;
+    const data = await fetchJson("/api/animals/birth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ creator_id: creatorId }),
+    });
+    if (data.creator && data.creator !== creatorId) {
+      setAnonId(data.creator);
+      state.creatorId = data.creator;
+    }
+    const shareUrl = data.slug ? `/a/${data.slug}` : "#";
+    birthMessage.innerHTML = `Born: ${titleCase(data.species || "animal")} · <a href="${shareUrl}">open profile</a>`;
     await loadAnimals();
     await loadYourAnimals();
     await loadFeed();
     await selectAnimal(data.animal_id);
   } catch (error) {
-    if (error.status === 401) {
-      clearAuth();
-      renderAuthStatus();
-      openAuthModal("Sign in to birth an animal.");
-    } else {
-      birthMessage.textContent = error.payload?.message || "Birth failed.";
-    }
+    birthMessage.textContent = error.payload?.message || "Birth failed.";
   } finally {
     setBirthLoading(false);
   }
@@ -511,256 +516,39 @@ function startAutoRefresh() {
     await loadYourAnimals();
     await loadFeed();
     await loadSelection();
-  }, 5000);
+  }, 25000);
 }
 
-async function loadAuth() {
-  if (supabaseClient) {
-    try {
-      const { data, error } = await supabaseClient.auth.getSession();
-      if (error || !data?.session) {
-        clearAuth();
-        return;
-      }
-      const session = data.session;
-      const user = session.user || {};
-      state.token = session.access_token || null;
-      state.user = {
-        user_id: user.id,
-        username: user.email || user.user_metadata?.name || "User",
-      };
-      state.creatorId = state.user.user_id;
-      setAuthToken(state.token);
-      return;
-    } catch (_) {
-      clearAuth();
-      return;
-    }
-  }
-
-  state.token = getAuthToken();
-  if (!state.token) {
-    clearAuth();
-    return;
-  }
-  try {
-    const data = await fetchJson("/api/auth/me", {
-      headers: { Authorization: "Bearer " + state.token },
-    });
-    state.user = { user_id: data.user_id, username: data.username };
-    state.creatorId = state.user.user_id;
-  } catch (_) {
-    clearAuth();
-  }
-}
-
-function renderAuthStatus() {
-  const el = document.getElementById("authStatus");
+function showReturnMessage() {
+  const el = document.getElementById("returnMessage");
   if (!el) return;
-  if (state.user) {
-    el.innerHTML = `<span class="auth-username">${escapeHtml(
-      state.user.username
-    )}</span> <button type="button" id="signOutBtn" class="btn-secondary btn-text">Sign out</button>`;
-    const signOutBtn = document.getElementById("signOutBtn");
-    if (signOutBtn)
-      signOutBtn.addEventListener("click", async () => {
-        if (supabaseClient) {
-          try {
-            await supabaseClient.auth.signOut();
-          } catch (_) {}
-        }
-        clearAuth();
-        renderAuthStatus();
-        loadYourAnimals();
-      });
-    birthButton.disabled = false;
-    if (birthButtonHero) birthButtonHero.disabled = false;
-  } else {
-    el.innerHTML = '<button type="button" id="signInBtn" class="btn-secondary">Sign in</button>';
-    document.getElementById("signInBtn")?.addEventListener("click", () => openAuthModal());
-    birthButton.disabled = true;
-    if (birthButtonHero) birthButtonHero.disabled = true;
-  }
-}
-
-function syncAuthState(session) {
-  if (!session || !session.access_token) {
-    clearAuth();
-    return;
-  }
-  const user = session.user || {};
-  state.token = session.access_token;
-  state.user = {
-    user_id: user.id,
-    username: user.email || user.user_metadata?.name || "User",
-  };
-  state.creatorId = state.user.user_id;
-  setAuthToken(state.token);
-}
-
-function initSupabase() {
-  if (!state.supabaseUrl || !state.supabaseAnonKey) return;
-  if (!window.supabase || !window.supabase.createClient) return;
-  supabaseClient = window.supabase.createClient(state.supabaseUrl, state.supabaseAnonKey, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-    },
-  });
-  supabaseClient.auth.onAuthStateChange((_event, session) => {
-    if (session) {
-      syncAuthState(session);
-    } else {
-      clearAuth();
-    }
-    renderAuthStatus();
-    loadYourAnimals();
-  });
-}
-
-async function sendMagicLink() {
-  const errEl = document.getElementById("authError");
-  const noticeEl = document.getElementById("authMagicLinkNotice");
-  const configErr = document.getElementById("authConfigError");
-  const emailInput = document.getElementById("authEmail");
-  const submitBtn = document.getElementById("authMagicLinkBtn");
-  const email = (emailInput?.value || "").trim();
-
-  if (errEl) errEl.hidden = true;
-  if (noticeEl) noticeEl.hidden = true;
-  if (configErr) configErr.hidden = true;
-
-  if (!supabaseClient) {
-    if (configErr) {
-      configErr.textContent = "Magic link sign-in is not configured.";
-      configErr.hidden = false;
-    }
-    return;
-  }
-
-  if (!email) {
-    if (errEl) {
-      errEl.textContent = "Email required.";
-      errEl.hidden = false;
-    }
-    return;
-  }
-
-  if (submitBtn) {
-    submitBtn.disabled = true;
-    submitBtn.textContent = "Sending...";
-  }
-
-  const redirectUrl =
-    state.supabaseRedirectUrl || `${window.location.origin}/#observe`;
-
+  let lastSeen = 0;
   try {
-    const { error } = await supabaseClient.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: redirectUrl },
-    });
-    if (error) throw error;
-    if (noticeEl) {
-      noticeEl.textContent = "Check your email for the sign-in link.";
-      noticeEl.hidden = false;
-    }
-  } catch (err) {
-    if (errEl) {
-      errEl.textContent = err?.message || "Failed to send magic link.";
-      errEl.hidden = false;
-    }
-  } finally {
-    if (submitBtn) {
-      submitBtn.disabled = false;
-      submitBtn.textContent = "Send magic link";
-    }
-  }
-}
-
-function initAuthModal() {
-  const form = document.getElementById("authMagicLinkForm");
-  if (form) {
-    form.addEventListener("submit", (event) => {
-      event.preventDefault();
-      sendMagicLink();
-    });
-  }
-}
-
-function escapeHtml(s) {
-  const div = document.createElement("div");
-  div.textContent = s;
-  return div.innerHTML;
-}
-
-async function loadConfig() {
-  try {
-    const data = await fetchJson("/api/config");
-    state.supabaseUrl = (data.supabase_url || "").trim();
-    state.supabaseAnonKey = (data.supabase_anon_key || "").trim();
-    state.supabaseRedirectUrl = (data.supabase_redirect_url || "").trim();
+    lastSeen = Number(localStorage.getItem(LAST_SEEN_KEY) || 0);
   } catch (_) {
-    state.supabaseUrl = "";
-    state.supabaseAnonKey = "";
-    state.supabaseRedirectUrl = "";
+    lastSeen = 0;
   }
+  const now = Date.now();
+  const diff = now - lastSeen;
+  if (!lastSeen || diff < 20 * 60 * 1000) {
+    el.hidden = true;
+    updateLastSeen();
+    return;
+  }
+  const messages = [
+    "Your animal changed.",
+    "It noticed another presence.",
+    "It was quiet for a long time.",
+    "Another observer joined.",
+    "New presence detected.",
+  ];
+  el.textContent = messages[Math.floor(Math.random() * messages.length)];
+  el.hidden = false;
+  updateLastSeen();
 }
-
-function openAuthModal(message) {
-  const modal = document.getElementById("authModal");
-  const errEl = document.getElementById("authError");
-  const configErr = document.getElementById("authConfigError");
-  const emailInput = document.getElementById("authEmail");
-  const noticeEl = document.getElementById("authMagicLinkNotice");
-  const submitBtn = document.getElementById("authMagicLinkBtn");
-  if (errEl) {
-    if (message) {
-      errEl.textContent = message;
-      errEl.hidden = false;
-    } else {
-      errEl.hidden = true;
-    }
-  }
-  if (noticeEl) noticeEl.hidden = true;
-  if (configErr) configErr.hidden = true;
-  if (emailInput) emailInput.value = "";
-  if (modal) {
-    modal.removeAttribute("hidden");
-    modal.setAttribute("aria-hidden", "false");
-  }
-  if (!state.supabaseUrl || !state.supabaseAnonKey) {
-    if (configErr) {
-      configErr.textContent = "Magic link sign-in is not configured.";
-      configErr.hidden = false;
-    }
-    if (submitBtn) submitBtn.disabled = true;
-  } else if (submitBtn) {
-    submitBtn.disabled = false;
-  }
-}
-
-function closeAuthModal() {
-  const modal = document.getElementById("authModal");
-  const errEl = document.getElementById("authError");
-  const configErr = document.getElementById("authConfigError");
-  const noticeEl = document.getElementById("authMagicLinkNotice");
-  if (modal) {
-    modal.setAttribute("hidden", "");
-    modal.setAttribute("aria-hidden", "true");
-  }
-  if (errEl) errEl.hidden = true;
-  if (configErr) configErr.hidden = true;
-  if (noticeEl) noticeEl.hidden = true;
-}
-
-document.querySelector(".auth-modal-backdrop")?.addEventListener("click", closeAuthModal);
-document.querySelector(".auth-modal-close")?.addEventListener("click", closeAuthModal);
 
 birthButton.addEventListener("click", birthAnimal);
 if (birthButtonHero) birthButtonHero.addEventListener("click", birthAnimal);
-
-initAuthModal();
 
 document.querySelectorAll(".filter-pill").forEach((btn) => {
   btn.addEventListener("click", () => {
@@ -776,11 +564,10 @@ document.querySelectorAll(".filter-pill").forEach((btn) => {
   });
 });
 
-loadConfig()
-  .then(() => initSupabase())
-  .then(() => loadAuth())
-  .then(() => renderAuthStatus())
-  .then(() => loadAnimals())
+ensureAnonId();
+showReturnMessage();
+window.addEventListener("beforeunload", updateLastSeen);
+loadAnimals()
   .then(() => loadYourAnimals())
   .then(() => loadFeed())
   .then(() => loadSelection())

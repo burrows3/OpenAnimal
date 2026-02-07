@@ -9,14 +9,15 @@ from dataclasses import dataclass, field
 class ExpressionEntry:
     tick: int
     sentences: list[str]
+    public_tick: int | None = None
 
 
 @dataclass
 class Timeline:
     expressions: list[ExpressionEntry] = field(default_factory=list)
 
-    def add_expression(self, tick: int, sentences: list[str]) -> None:
-        self.expressions.append(ExpressionEntry(tick=tick, sentences=sentences))
+    def add_expression(self, tick: int, sentences: list[str], public_tick: int | None = None) -> None:
+        self.expressions.append(ExpressionEntry(tick=tick, sentences=sentences, public_tick=public_tick))
 
     def render(self, current_tick: int, silence_marker: str = "...") -> list[str]:
         rendered: list[str] = []
