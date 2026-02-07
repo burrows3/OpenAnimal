@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import random
 
 from .archive import create_snapshot
-from .config import ARCHIVE_INTERVAL_TICKS, SPECIES
+from .config import ARCHIVE_INTERVAL_TICKS, POPULATION_GROWTH_PER_RUN, POPULATION_TARGET, SPECIES
 from .agent import LifeAgent
 from .storage import get_recent_feed, list_agents, load_agent, save_agent, save_archive
 from .world import WorldSignalStream
@@ -29,7 +29,7 @@ class Simulator:
             animal_ids = list_agents()
             if not animal_ids:
                 continue
-            sample_fraction = self.rng.uniform(0.2, 0.6)
+            sample_fraction = self.rng.uniform(0.4, 0.9)
             sample_size = max(1, int(len(animal_ids) * sample_fraction))
             if sample_size < len(animal_ids):
                 animal_ids = self.rng.sample(animal_ids, k=sample_size)
@@ -45,7 +45,16 @@ class Simulator:
                     snapshot = create_snapshot(agent)
                     save_archive(agent.animal_id, snapshot)
                 save_agent(agent)
-            if self.rng.random() < 0.003:
+            if len(animal_ids) < POPULATION_TARGET:
+                births = min(POPULATION_GROWTH_PER_RUN, POPULATION_TARGET - len(animal_ids))
+                for _ in range(births):
+                    parent_id = self.rng.choice(animal_ids)
+                    parent = load_agent(parent_id)
+                    child = LifeAgent.birth(creator=parent.creator)
+                    child.species = self.rng.choice([parent.species] + SPECIES)
+                    child.slug = f"{child.species}-{child.animal_id[:6]}"
+                    save_agent(child)
+            elif self.rng.random() < 0.01:
                 parent_id = self.rng.choice(animal_ids)
                 parent = load_agent(parent_id)
                 child = LifeAgent.birth(creator=parent.creator)

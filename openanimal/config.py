@@ -4,12 +4,106 @@ TICK_SECONDS = 60
 
 # Species available for new births.
 SPECIES = [
-    "bird",
+    "aardvark",
+    "albatross",
+    "alligator",
+    "alpaca",
+    "antelope",
+    "armadillo",
+    "badger",
+    "bat",
+    "bear",
+    "beaver",
+    "bison",
+    "boar",
+    "buffalo",
+    "camel",
+    "capybara",
+    "caribou",
+    "cat",
+    "chameleon",
+    "cheetah",
+    "chimpanzee",
+    "chinchilla",
+    "chipmunk",
+    "cobra",
+    "cougar",
+    "coyote",
+    "crane",
+    "crow",
+    "deer",
+    "dingo",
+    "dolphin",
+    "donkey",
+    "dove",
+    "duck",
+    "eagle",
+    "eel",
+    "elephant",
+    "elk",
+    "falcon",
+    "ferret",
     "fox",
+    "frog",
+    "gazelle",
+    "gecko",
+    "giraffe",
+    "goat",
+    "goose",
+    "gorilla",
+    "heron",
+    "hippopotamus",
+    "horse",
+    "hyena",
+    "ibex",
+    "iguana",
+    "jackal",
+    "jaguar",
+    "kangaroo",
+    "koala",
+    "lemur",
+    "leopard",
+    "lion",
     "lizard",
+    "llama",
+    "lobster",
+    "lynx",
+    "manatee",
+    "marmot",
+    "mink",
+    "mole",
+    "monkey",
+    "moose",
+    "otter",
     "owl",
-    "snail",
+    "panda",
+    "panther",
+    "parrot",
+    "pelican",
+    "penguin",
+    "porcupine",
+    "rabbit",
+    "raccoon",
+    "raven",
+    "reindeer",
+    "rhinoceros",
+    "seal",
+    "shark",
+    "sheep",
+    "skunk",
+    "sloth",
+    "snake",
+    "sparrow",
+    "squirrel",
+    "swan",
+    "tapir",
+    "tiger",
+    "toad",
+    "turkey",
     "turtle",
+    "walrus",
+    "weasel",
+    "wolf",
 ]
 
 TEMPERAMENTS = [
@@ -21,6 +115,10 @@ TEMPERAMENTS = [
     "playful",
     "solitary",
     "attentive",
+    "social",
+    "bold",
+    "gentle",
+    "wary",
 ]
 
 PHASE_THRESHOLDS = {
@@ -46,20 +144,20 @@ STATE_DRIFT = {
 
 STATE_BOUNDS = (0.0, 1.0)
 
-# Pressure builds so agents become eligible to express occasionally
-PRESSURE_BASE_GROWTH = 0.004
-PRESSURE_TOLERANCE_BASE = 0.62
-PRESSURE_TOLERANCE_VARIANCE = 0.15
+# Pressure builds so agents become eligible to express more often
+PRESSURE_BASE_GROWTH = 0.006
+PRESSURE_TOLERANCE_BASE = 0.52
+PRESSURE_TOLERANCE_VARIANCE = 0.18
 
-# Posting is rare; most ticks are silent
-EXPRESSION_COOLDOWN_TICKS = 18
+# Posting is still restrained, but more social
+EXPRESSION_COOLDOWN_TICKS = 8
 
 # Action selection probabilities per tick
 ACTION_PROBS = {
-    "silent": 0.70,
-    "observe": 0.20,
-    "internal": 0.07,
-    "express": 0.03,
+    "silent": 0.35,
+    "observe": 0.30,
+    "internal": 0.15,
+    "express": 0.20,
 }
 
 MEMORY_DECAY_RATE = 0.002
@@ -88,6 +186,10 @@ RARE_EVENT_DISAPPEAR_PROB = 0.20
 FEED_MAX_POSTS = 60
 
 # Background ticking defaults (seconds)
-TICK_INTERVAL_MIN = 300
-TICK_INTERVAL_MAX = 1800
-TICKS_PER_INTERVAL = 1
+TICK_INTERVAL_MIN = 60
+TICK_INTERVAL_MAX = 120
+TICKS_PER_INTERVAL = 2
+
+# Population growth
+POPULATION_TARGET = 100
+POPULATION_GROWTH_PER_RUN = 3
