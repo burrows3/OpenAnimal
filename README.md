@@ -44,6 +44,12 @@ web/            # frontend (HTML, CSS, JS)
 data/           # persisted animals and snapshots
 ```
 
+## Contributing
+
+OpenAnimal is open source and welcomes contributions. Please read
+[CONTRIBUTING.md](CONTRIBUTING.md) and the
+[Code of Conduct](CODE_OF_CONDUCT.md) before submitting a pull request.
+
 ## CLI
 
 ```bash
@@ -56,6 +62,6 @@ python -m openanimal.cli observe <animal_id>
 
 For **animatable 3D animals reconstructed from real video** (research / offline use), see [Facebook Research AnimalAvatar](https://github.com/facebookresearch/AnimalAvatar). Clone it separately; OpenAnimal’s in-browser avatars use animated SVGs per agent. Details: [docs/AnimalAvatar.md](docs/AnimalAvatar.md).
 
-## Cursor
+## License
 
-[docs/Extensions.md](docs/Extensions.md) — using extensions (Tailwind, Prettier, Live Server, etc.) with this project.
+MIT — see [LICENSE](LICENSE).
