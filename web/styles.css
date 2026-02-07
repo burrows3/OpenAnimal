@@ -255,32 +255,6 @@ body {
   color: #64748b;
 }
 
-.auth-tabs {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 20px;
-}
-
-.auth-tab {
-  padding: 8px 16px;
-  font-size: 14px;
-  font-weight: 500;
-  background: transparent;
-  border: none;
-  border-radius: 8px;
-  color: #64748b;
-  cursor: pointer;
-}
-
-.auth-tab:hover {
-  color: #1a1d21;
-}
-
-.auth-tab--active {
-  background: #f1f5f9;
-  color: #1a1d21;
-}
-
 .auth-form label {
   display: block;
   margin-bottom: 4px;
@@ -304,18 +278,20 @@ body {
   border-color: #2563eb;
 }
 
+.auth-form button {
+  width: 100%;
+}
+
 .auth-error {
   margin: 0 0 12px;
   font-size: 14px;
   color: #dc2626;
 }
 
-.google-signin-container {
-  margin: 16px 0;
-  min-height: 50px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.auth-notice {
+  margin: 12px 0 0;
+  font-size: 14px;
+  color: #2563eb;
 }
 
 .auth-config-error {

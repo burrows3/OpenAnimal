@@ -51,3 +51,15 @@ def get_google_client_id() -> str:
 
 def get_auth_secret() -> str:
     return get_env("OPENANIMAL_AUTH_SECRET", "openanimal-default-secret-change-in-production")
+
+
+def get_supabase_url() -> str:
+    return get_env("OPENANIMAL_SUPABASE_URL", "").strip()
+
+
+def get_supabase_anon_key() -> str:
+    return get_env("OPENANIMAL_SUPABASE_ANON_KEY", "").strip()
+
+
+def get_supabase_redirect_url() -> str:
+    return get_env("OPENANIMAL_SUPABASE_REDIRECT_URL", "").strip()

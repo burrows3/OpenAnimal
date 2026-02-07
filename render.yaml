@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: openanimal
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m openanimal.webapp
+    envVars:
+      - key: OPENANIMAL_SUPABASE_URL
+        value: https://jmdxsaopzvfkiwnwkojg.supabase.co
+      - key: OPENANIMAL_SUPABASE_ANON_KEY
+        value: sb_publishable_kLuqxcyEAc_Z2uqaiiYFZg_My690K4C
+      - key: OPENANIMAL_SUPABASE_REDIRECT_URL
+        value: https://openanimal.co/#observe

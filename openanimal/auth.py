@@ -1,4 +1,4 @@
-"""Simple auth for OpenAnimal: users must sign in (Google) before birthing an animal."""
+"""Simple auth for OpenAnimal: users must sign in before birthing an animal."""
 
 from __future__ import annotations
 
@@ -10,7 +10,12 @@ from pathlib import Path
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 
-from .env import get_auth_secret, get_google_client_id
+from .env import (
+    get_auth_secret,
+    get_google_client_id,
+    get_supabase_anon_key,
+    get_supabase_url,
+)
 from .storage import DATA_ROOT
 
 USERS_FILE = DATA_ROOT / "users.json"
@@ -106,13 +111,13 @@ def get_user_by_token(token: str) -> dict | None:
         return None
     sessions = _load_sessions()
     user_id = sessions.get(token)
-    if not user_id:
+    if user_id:
+        users = _load_users()
+        for u in users:
+            if u.get("id") == user_id:
+                return {"id": user_id, "username": u.get("username", "")}
         return None
-    users = _load_users()
-    for u in users:
-        if u.get("id") == user_id:
-            return {"id": user_id, "username": u.get("username", "")}
-    return None
+    return _get_supabase_user(token)
 
 
 def logout(token: str) -> None:
@@ -122,6 +127,35 @@ def logout(token: str) -> None:
     sessions = _load_sessions()
     sessions.pop(token, None)
     _save_sessions(sessions)
+
+
+def _get_supabase_user(token: str) -> dict | None:
+    """Lookup a Supabase user from an access token."""
+    supabase_url = get_supabase_url()
+    supabase_anon_key = get_supabase_anon_key()
+    if not token or not supabase_url or not supabase_anon_key:
+        return None
+    endpoint = supabase_url.rstrip("/") + "/auth/v1/user"
+    try:
+        req = Request(
+            endpoint,
+            headers={
+                "Authorization": f"Bearer {token}",
+                "apikey": supabase_anon_key,
+                "User-Agent": "OpenAnimal/1.0",
+            },
+        )
+        with urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except (HTTPError, URLError, json.JSONDecodeError, ValueError, OSError):
+        return None
+    user_id = data.get("id") or ""
+    if not user_id:
+        return None
+    email = (data.get("email") or "").strip()[:256]
+    metadata = data.get("user_metadata") or {}
+    name = (metadata.get("name") or metadata.get("full_name") or email or user_id).strip()[:128]
+    return {"id": user_id, "username": name, "email": email}
 
 
 def _verify_google_id_token(id_token: str) -> dict | None:

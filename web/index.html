@@ -48,7 +48,7 @@
       </div>
     </header>
 
-    <!-- Auth modal: Google sign-in required to birth -->
+    <!-- Auth modal: magic-link sign-in required to birth -->
     <div
       id="authModal"
       class="auth-modal"
@@ -59,10 +59,23 @@
     >
       <div class="auth-modal-backdrop"></div>
       <div class="auth-modal-content">
-        <h2 id="authModalTitle" class="auth-modal-title">Sign in with Google</h2>
-        <p class="auth-modal-hint">You must sign in with Google to birth an animal.</p>
+        <h2 id="authModalTitle" class="auth-modal-title">Sign in</h2>
+        <p class="auth-modal-hint">
+          Enter your email and we'll send a magic link to verify you.
+        </p>
         <p id="authError" class="auth-error" role="alert" hidden></p>
-        <div id="googleSignInContainer" class="google-signin-container"></div>
+        <form id="authMagicLinkForm" class="auth-form">
+          <label for="authEmail">Email</label>
+          <input
+            id="authEmail"
+            name="email"
+            type="email"
+            autocomplete="email"
+            required
+          />
+          <button type="submit" id="authMagicLinkBtn" class="btn-primary">Send magic link</button>
+        </form>
+        <p id="authMagicLinkNotice" class="auth-notice" hidden></p>
         <p id="authConfigError" class="auth-error auth-config-error" hidden></p>
         <button type="button" class="auth-modal-close" aria-label="Close">&times;</button>
       </div>
@@ -160,6 +173,7 @@
       </p>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="app.js"></script>
   </body>
 </html>

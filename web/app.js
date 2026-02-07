@@ -11,8 +11,12 @@ const state = {
   currentMaxTick: 0,
   user: null,
   token: null,
-  googleClientId: "",
+  supabaseUrl: "",
+  supabaseAnonKey: "",
+  supabaseRedirectUrl: "",
 };
+
+let supabaseClient = null;
 
 function getAuthToken() {
   try {
@@ -465,7 +469,7 @@ function setBirthLoading(loading) {
 
 async function birthAnimal() {
   if (!state.user || !state.token) {
-    openAuthModal("Sign in with Google to birth an animal.");
+      openAuthModal("Sign in to birth an animal.");
     return;
   }
   setBirthLoading(true);
@@ -511,6 +515,29 @@ function startAutoRefresh() {
 }
 
 async function loadAuth() {
+  if (supabaseClient) {
+    try {
+      const { data, error } = await supabaseClient.auth.getSession();
+      if (error || !data?.session) {
+        clearAuth();
+        return;
+      }
+      const session = data.session;
+      const user = session.user || {};
+      state.token = session.access_token || null;
+      state.user = {
+        user_id: user.id,
+        username: user.email || user.user_metadata?.name || "User",
+      };
+      state.creatorId = state.user.user_id;
+      setAuthToken(state.token);
+      return;
+    } catch (_) {
+      clearAuth();
+      return;
+    }
+  }
+
   state.token = getAuthToken();
   if (!state.token) {
     clearAuth();
@@ -536,7 +563,12 @@ function renderAuthStatus() {
     )}</span> <button type="button" id="signOutBtn" class="btn-secondary btn-text">Sign out</button>`;
     const signOutBtn = document.getElementById("signOutBtn");
     if (signOutBtn)
-      signOutBtn.addEventListener("click", () => {
+      signOutBtn.addEventListener("click", async () => {
+        if (supabaseClient) {
+          try {
+            await supabaseClient.auth.signOut();
+          } catch (_) {}
+        }
         clearAuth();
         renderAuthStatus();
         loadYourAnimals();
@@ -544,11 +576,115 @@ function renderAuthStatus() {
     birthButton.disabled = false;
     if (birthButtonHero) birthButtonHero.disabled = false;
   } else {
-    el.innerHTML =
-      '<button type="button" id="signInBtn" class="btn-secondary">Sign in with Google</button>';
+    el.innerHTML = '<button type="button" id="signInBtn" class="btn-secondary">Sign in</button>';
     document.getElementById("signInBtn")?.addEventListener("click", () => openAuthModal());
     birthButton.disabled = true;
     if (birthButtonHero) birthButtonHero.disabled = true;
+  }
+}
+
+function syncAuthState(session) {
+  if (!session || !session.access_token) {
+    clearAuth();
+    return;
+  }
+  const user = session.user || {};
+  state.token = session.access_token;
+  state.user = {
+    user_id: user.id,
+    username: user.email || user.user_metadata?.name || "User",
+  };
+  state.creatorId = state.user.user_id;
+  setAuthToken(state.token);
+}
+
+function initSupabase() {
+  if (!state.supabaseUrl || !state.supabaseAnonKey) return;
+  if (!window.supabase || !window.supabase.createClient) return;
+  supabaseClient = window.supabase.createClient(state.supabaseUrl, state.supabaseAnonKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
+  });
+  supabaseClient.auth.onAuthStateChange((_event, session) => {
+    if (session) {
+      syncAuthState(session);
+    } else {
+      clearAuth();
+    }
+    renderAuthStatus();
+    loadYourAnimals();
+  });
+}
+
+async function sendMagicLink() {
+  const errEl = document.getElementById("authError");
+  const noticeEl = document.getElementById("authMagicLinkNotice");
+  const configErr = document.getElementById("authConfigError");
+  const emailInput = document.getElementById("authEmail");
+  const submitBtn = document.getElementById("authMagicLinkBtn");
+  const email = (emailInput?.value || "").trim();
+
+  if (errEl) errEl.hidden = true;
+  if (noticeEl) noticeEl.hidden = true;
+  if (configErr) configErr.hidden = true;
+
+  if (!supabaseClient) {
+    if (configErr) {
+      configErr.textContent = "Magic link sign-in is not configured.";
+      configErr.hidden = false;
+    }
+    return;
+  }
+
+  if (!email) {
+    if (errEl) {
+      errEl.textContent = "Email required.";
+      errEl.hidden = false;
+    }
+    return;
+  }
+
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Sending...";
+  }
+
+  const redirectUrl =
+    state.supabaseRedirectUrl || `${window.location.origin}/#observe`;
+
+  try {
+    const { error } = await supabaseClient.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: redirectUrl },
+    });
+    if (error) throw error;
+    if (noticeEl) {
+      noticeEl.textContent = "Check your email for the sign-in link.";
+      noticeEl.hidden = false;
+    }
+  } catch (err) {
+    if (errEl) {
+      errEl.textContent = err?.message || "Failed to send magic link.";
+      errEl.hidden = false;
+    }
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Send magic link";
+    }
+  }
+}
+
+function initAuthModal() {
+  const form = document.getElementById("authMagicLinkForm");
+  if (form) {
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      sendMagicLink();
+    });
   }
 }
 
@@ -561,70 +697,23 @@ function escapeHtml(s) {
 async function loadConfig() {
   try {
     const data = await fetchJson("/api/config");
-    state.googleClientId = (data.google_client_id || "").trim();
+    state.supabaseUrl = (data.supabase_url || "").trim();
+    state.supabaseAnonKey = (data.supabase_anon_key || "").trim();
+    state.supabaseRedirectUrl = (data.supabase_redirect_url || "").trim();
   } catch (_) {
-    state.googleClientId = "";
+    state.supabaseUrl = "";
+    state.supabaseAnonKey = "";
+    state.supabaseRedirectUrl = "";
   }
-}
-
-function renderGoogleSignInButton(container) {
-  if (!container || !state.googleClientId) return;
-  container.innerHTML = "";
-  if (typeof google === "undefined" || !google.accounts || !google.accounts.id) {
-    const configErr = document.getElementById("authConfigError");
-    if (configErr) {
-      configErr.textContent =
-        "Google sign-in is not configured. Set OPENANIMAL_GOOGLE_CLIENT_ID on the server.";
-      configErr.hidden = false;
-    }
-    return;
-  }
-  const configErr = document.getElementById("authConfigError");
-  if (configErr) configErr.hidden = true;
-  google.accounts.id.initialize({
-    client_id: state.googleClientId,
-    callback: async (response) => {
-      const errEl = document.getElementById("authError");
-      if (errEl) {
-        errEl.hidden = true;
-      }
-      try {
-        const res = await fetch("/api/auth/google", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ credential: response.credential }),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw { status: res.status, payload: data };
-        setAuthToken(data.token);
-        state.token = data.token;
-        state.user = { user_id: data.user_id, username: data.username };
-        state.creatorId = state.user.user_id;
-        closeAuthModal();
-        renderAuthStatus();
-        await loadYourAnimals();
-      } catch (err) {
-        if (errEl) {
-          errEl.textContent = err.payload?.error || "Sign-in failed.";
-          errEl.hidden = false;
-        }
-      }
-    },
-  });
-  google.accounts.id.renderButton(container, {
-    type: "standard",
-    theme: "filled_blue",
-    size: "large",
-    text: "signin_with",
-    width: 280,
-  });
 }
 
 function openAuthModal(message) {
   const modal = document.getElementById("authModal");
   const errEl = document.getElementById("authError");
   const configErr = document.getElementById("authConfigError");
-  const container = document.getElementById("googleSignInContainer");
+  const emailInput = document.getElementById("authEmail");
+  const noticeEl = document.getElementById("authMagicLinkNotice");
+  const submitBtn = document.getElementById("authMagicLinkBtn");
   if (errEl) {
     if (message) {
       errEl.textContent = message;
@@ -633,28 +722,21 @@ function openAuthModal(message) {
       errEl.hidden = true;
     }
   }
+  if (noticeEl) noticeEl.hidden = true;
   if (configErr) configErr.hidden = true;
-  if (container) container.innerHTML = "";
+  if (emailInput) emailInput.value = "";
   if (modal) {
     modal.removeAttribute("hidden");
     modal.setAttribute("aria-hidden", "false");
   }
-  if (!state.googleClientId) {
+  if (!state.supabaseUrl || !state.supabaseAnonKey) {
     if (configErr) {
-      configErr.textContent =
-        "Google sign-in is not configured. Set OPENANIMAL_GOOGLE_CLIENT_ID on the server.";
+      configErr.textContent = "Magic link sign-in is not configured.";
       configErr.hidden = false;
     }
-  } else {
-    if (typeof google !== "undefined" && google.accounts && google.accounts.id) {
-      renderGoogleSignInButton(container);
-    } else {
-      const script = document.createElement("script");
-      script.src = "https://accounts.google.com/gsi/client";
-      script.async = true;
-      script.onload = () => renderGoogleSignInButton(container);
-      document.head.appendChild(script);
-    }
+    if (submitBtn) submitBtn.disabled = true;
+  } else if (submitBtn) {
+    submitBtn.disabled = false;
   }
 }
 
@@ -662,14 +744,14 @@ function closeAuthModal() {
   const modal = document.getElementById("authModal");
   const errEl = document.getElementById("authError");
   const configErr = document.getElementById("authConfigError");
-  const container = document.getElementById("googleSignInContainer");
+  const noticeEl = document.getElementById("authMagicLinkNotice");
   if (modal) {
     modal.setAttribute("hidden", "");
     modal.setAttribute("aria-hidden", "true");
   }
   if (errEl) errEl.hidden = true;
   if (configErr) configErr.hidden = true;
-  if (container) container.innerHTML = "";
+  if (noticeEl) noticeEl.hidden = true;
 }
 
 document.querySelector(".auth-modal-backdrop")?.addEventListener("click", closeAuthModal);
@@ -677,6 +759,8 @@ document.querySelector(".auth-modal-close")?.addEventListener("click", closeAuth
 
 birthButton.addEventListener("click", birthAnimal);
 if (birthButtonHero) birthButtonHero.addEventListener("click", birthAnimal);
+
+initAuthModal();
 
 document.querySelectorAll(".filter-pill").forEach((btn) => {
   btn.addEventListener("click", () => {
@@ -693,6 +777,7 @@ document.querySelectorAll(".filter-pill").forEach((btn) => {
 });
 
 loadConfig()
+  .then(() => initSupabase())
   .then(() => loadAuth())
   .then(() => renderAuthStatus())
   .then(() => loadAnimals())

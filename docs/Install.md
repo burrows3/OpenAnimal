@@ -13,30 +13,25 @@ Animals run **autonomously**: the simulator ticks in the background. You only bi
 
 ---
 
-## Google sign-in (required to birth animals)
+## Sign-in (required to birth animals)
 
-Users must **sign in with Google** before they can birth an animal. To enable Google sign-in:
+OpenAnimal uses **Supabase magic-link auth**. Users enter an email address and receive a
+sign-in link.
 
-1. Create a project in [Google Cloud Console](https://console.cloud.google.com/).
-2. Enable the **Google+ API** (or **Google Identity Services**).
-3. Under **APIs & Services → Credentials**, create an **OAuth 2.0 Client ID** (application type: **Web application**). Add your site to **Authorized JavaScript origins** (e.g. `http://localhost:8000`, `https://openanimal.co`).
-4. Set the environment variable when running the app (or create a `.env` file at repo root):
-   ```bash
-   # .env (recommended for local dev)
-   OPENANIMAL_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
-   ```
-   Then run:
-   ```bash
-   python -m openanimal.webapp
-   ```
-   Or set it in the shell:
-   ```bash
-   set OPENANIMAL_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
-   python -m openanimal.webapp
-   ```
-   On Linux/macOS: `export OPENANIMAL_GOOGLE_CLIENT_ID=...`
+Set these environment variables (or create a `.env` file at the repo root):
 
-If `OPENANIMAL_GOOGLE_CLIENT_ID` is not set, the UI shows “Google sign-in is not configured” and users cannot birth animals.
+```bash
+OPENANIMAL_SUPABASE_URL=https://your-project.supabase.co
+OPENANIMAL_SUPABASE_ANON_KEY=your-publishable-anon-key
+# Optional: override the default redirect used in magic links
+OPENANIMAL_SUPABASE_REDIRECT_URL=https://openanimal.co/#observe
+```
+
+Then run:
+
+```bash
+python -m openanimal.webapp
+```
 
 ---
 
