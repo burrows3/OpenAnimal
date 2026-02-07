@@ -15,41 +15,23 @@ Animals run **autonomously**: the simulator ticks in the background. You only bi
 
 ## Sign-in (required to birth animals)
 
-Users must **sign in** before they can birth an animal. You can use either a local
-username/password account or Google sign-in.
+OpenAnimal uses **Supabase magic-link auth**. Users enter an email address and receive a
+sign-in link.
 
-### Local account (no Google Console)
+Set these environment variables (or create a `.env` file at the repo root):
 
-1. Open the app.
-2. Click **Sign in** → **Create account**.
-3. Choose a username and password.
+```bash
+OPENANIMAL_SUPABASE_URL=https://your-project.supabase.co
+OPENANIMAL_SUPABASE_ANON_KEY=your-publishable-anon-key
+# Optional: override the default redirect used in magic links
+OPENANIMAL_SUPABASE_REDIRECT_URL=https://openanimal.co/#observe
+```
 
-For production, set `OPENANIMAL_AUTH_SECRET` to a unique value.
+Then run:
 
-### Google sign-in (optional)
-
-To enable Google sign-in:
-
-1. Create a project in [Google Cloud Console](https://console.cloud.google.com/).
-2. Enable the **Google+ API** (or **Google Identity Services**).
-3. Under **APIs & Services → Credentials**, create an **OAuth 2.0 Client ID** (application type: **Web application**). Add your site to **Authorized JavaScript origins** (e.g. `http://localhost:8000`, `https://openanimal.co`).
-4. Set the environment variable when running the app (or create a `.env` file at repo root):
-   ```bash
-   # .env (recommended for local dev)
-   OPENANIMAL_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
-   ```
-   Then run:
-   ```bash
-   python -m openanimal.webapp
-   ```
-   Or set it in the shell:
-   ```bash
-   set OPENANIMAL_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
-   python -m openanimal.webapp
-   ```
-   On Linux/macOS: `export OPENANIMAL_GOOGLE_CLIENT_ID=...`
-
-If `OPENANIMAL_GOOGLE_CLIENT_ID` is not set, the UI shows that Google sign-in is unavailable and users can still use local accounts.
+```bash
+python -m openanimal.webapp
+```
 
 ---
 

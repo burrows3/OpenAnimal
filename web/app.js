@@ -11,9 +11,12 @@ const state = {
   currentMaxTick: 0,
   user: null,
   token: null,
-  googleClientId: "",
-  authMode: "login",
+  supabaseUrl: "",
+  supabaseAnonKey: "",
+  supabaseRedirectUrl: "",
 };
+
+let supabaseClient = null;
 
 function getAuthToken() {
   try {
@@ -466,7 +469,7 @@ function setBirthLoading(loading) {
 
 async function birthAnimal() {
   if (!state.user || !state.token) {
-    openAuthModal("Sign in with Google to birth an animal.");
+      openAuthModal("Sign in to birth an animal.");
     return;
   }
   setBirthLoading(true);
@@ -512,6 +515,29 @@ function startAutoRefresh() {
 }
 
 async function loadAuth() {
+  if (supabaseClient) {
+    try {
+      const { data, error } = await supabaseClient.auth.getSession();
+      if (error || !data?.session) {
+        clearAuth();
+        return;
+      }
+      const session = data.session;
+      const user = session.user || {};
+      state.token = session.access_token || null;
+      state.user = {
+        user_id: user.id,
+        username: user.email || user.user_metadata?.name || "User",
+      };
+      state.creatorId = state.user.user_id;
+      setAuthToken(state.token);
+      return;
+    } catch (_) {
+      clearAuth();
+      return;
+    }
+  }
+
   state.token = getAuthToken();
   if (!state.token) {
     clearAuth();
@@ -537,7 +563,12 @@ function renderAuthStatus() {
     )}</span> <button type="button" id="signOutBtn" class="btn-secondary btn-text">Sign out</button>`;
     const signOutBtn = document.getElementById("signOutBtn");
     if (signOutBtn)
-      signOutBtn.addEventListener("click", () => {
+      signOutBtn.addEventListener("click", async () => {
+        if (supabaseClient) {
+          try {
+            await supabaseClient.auth.signOut();
+          } catch (_) {}
+        }
         clearAuth();
         renderAuthStatus();
         loadYourAnimals();
@@ -552,49 +583,65 @@ function renderAuthStatus() {
   }
 }
 
-function setAuthMode(mode) {
-  state.authMode = mode === "register" ? "register" : "login";
-  const tabs = document.querySelectorAll(".auth-tab");
-  tabs.forEach((tab) => {
-    const tabMode = tab.getAttribute("data-auth-mode");
-    const isActive = tabMode === state.authMode;
-    tab.classList.toggle("auth-tab--active", isActive);
-    tab.setAttribute("aria-pressed", isActive ? "true" : "false");
-  });
-  const title = document.getElementById("authModalTitle");
-  if (title) {
-    title.textContent = state.authMode === "register" ? "Create account" : "Sign in";
+function syncAuthState(session) {
+  if (!session || !session.access_token) {
+    clearAuth();
+    return;
   }
-  const submitBtn = document.getElementById("authSubmitBtn");
-  if (submitBtn) {
-    submitBtn.textContent = state.authMode === "register" ? "Create account" : "Sign in";
-  }
-  const passwordInput = document.getElementById("authPassword");
-  if (passwordInput) {
-    passwordInput.autocomplete =
-      state.authMode === "register" ? "new-password" : "current-password";
-  }
+  const user = session.user || {};
+  state.token = session.access_token;
+  state.user = {
+    user_id: user.id,
+    username: user.email || user.user_metadata?.name || "User",
+  };
+  state.creatorId = state.user.user_id;
+  setAuthToken(state.token);
 }
 
-async function submitAuthForm() {
+function initSupabase() {
+  if (!state.supabaseUrl || !state.supabaseAnonKey) return;
+  if (!window.supabase || !window.supabase.createClient) return;
+  supabaseClient = window.supabase.createClient(state.supabaseUrl, state.supabaseAnonKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
+  });
+  supabaseClient.auth.onAuthStateChange((_event, session) => {
+    if (session) {
+      syncAuthState(session);
+    } else {
+      clearAuth();
+    }
+    renderAuthStatus();
+    loadYourAnimals();
+  });
+}
+
+async function sendMagicLink() {
   const errEl = document.getElementById("authError");
-  const submitBtn = document.getElementById("authSubmitBtn");
-  const usernameInput = document.getElementById("authUsername");
-  const passwordInput = document.getElementById("authPassword");
-  const username = (usernameInput?.value || "").trim();
-  const password = passwordInput?.value || "";
+  const noticeEl = document.getElementById("authMagicLinkNotice");
+  const configErr = document.getElementById("authConfigError");
+  const emailInput = document.getElementById("authEmail");
+  const submitBtn = document.getElementById("authMagicLinkBtn");
+  const email = (emailInput?.value || "").trim();
 
   if (errEl) errEl.hidden = true;
-  if (!username || !password) {
-    if (errEl) {
-      errEl.textContent = "Username and password required.";
-      errEl.hidden = false;
+  if (noticeEl) noticeEl.hidden = true;
+  if (configErr) configErr.hidden = true;
+
+  if (!supabaseClient) {
+    if (configErr) {
+      configErr.textContent = "Magic link sign-in is not configured.";
+      configErr.hidden = false;
     }
     return;
   }
-  if (state.authMode === "register" && password.length < 4) {
+
+  if (!email) {
     if (errEl) {
-      errEl.textContent = "Password must be at least 4 characters.";
+      errEl.textContent = "Email required.";
       errEl.hidden = false;
     }
     return;
@@ -602,47 +649,41 @@ async function submitAuthForm() {
 
   if (submitBtn) {
     submitBtn.disabled = true;
-    submitBtn.textContent = state.authMode === "register" ? "Creating..." : "Signing in...";
+    submitBtn.textContent = "Sending...";
   }
 
-  const endpoint = state.authMode === "register" ? "/api/auth/register" : "/api/auth/login";
+  const redirectUrl =
+    state.supabaseRedirectUrl || `${window.location.origin}/#observe`;
+
   try {
-    const data = await fetchJson(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
+    const { error } = await supabaseClient.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: redirectUrl },
     });
-    setAuthToken(data.token);
-    state.token = data.token;
-    state.user = { user_id: data.user_id, username: data.username };
-    state.creatorId = state.user.user_id;
-    closeAuthModal();
-    renderAuthStatus();
-    await loadYourAnimals();
+    if (error) throw error;
+    if (noticeEl) {
+      noticeEl.textContent = "Check your email for the sign-in link.";
+      noticeEl.hidden = false;
+    }
   } catch (err) {
     if (errEl) {
-      errEl.textContent = err.payload?.error || "Sign-in failed.";
+      errEl.textContent = err?.message || "Failed to send magic link.";
       errEl.hidden = false;
     }
   } finally {
     if (submitBtn) {
       submitBtn.disabled = false;
-      submitBtn.textContent = state.authMode === "register" ? "Create account" : "Sign in";
+      submitBtn.textContent = "Send magic link";
     }
   }
 }
 
 function initAuthModal() {
-  document.querySelectorAll(".auth-tab").forEach((tab) => {
-    tab.addEventListener("click", () => {
-      setAuthMode(tab.getAttribute("data-auth-mode"));
-    });
-  });
-  const form = document.getElementById("authForm");
+  const form = document.getElementById("authMagicLinkForm");
   if (form) {
     form.addEventListener("submit", (event) => {
       event.preventDefault();
-      submitAuthForm();
+      sendMagicLink();
     });
   }
 }
@@ -656,71 +697,23 @@ function escapeHtml(s) {
 async function loadConfig() {
   try {
     const data = await fetchJson("/api/config");
-    state.googleClientId = (data.google_client_id || "").trim();
+    state.supabaseUrl = (data.supabase_url || "").trim();
+    state.supabaseAnonKey = (data.supabase_anon_key || "").trim();
+    state.supabaseRedirectUrl = (data.supabase_redirect_url || "").trim();
   } catch (_) {
-    state.googleClientId = "";
+    state.supabaseUrl = "";
+    state.supabaseAnonKey = "";
+    state.supabaseRedirectUrl = "";
   }
-}
-
-function renderGoogleSignInButton(container) {
-  if (!container || !state.googleClientId) return;
-  container.innerHTML = "";
-  if (typeof google === "undefined" || !google.accounts || !google.accounts.id) {
-    const configErr = document.getElementById("authConfigError");
-    if (configErr) {
-      configErr.textContent = "Google sign-in could not be loaded. Use a local account instead.";
-      configErr.hidden = false;
-    }
-    return;
-  }
-  const configErr = document.getElementById("authConfigError");
-  if (configErr) configErr.hidden = true;
-  google.accounts.id.initialize({
-    client_id: state.googleClientId,
-    callback: async (response) => {
-      const errEl = document.getElementById("authError");
-      if (errEl) {
-        errEl.hidden = true;
-      }
-      try {
-        const res = await fetch("/api/auth/google", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ credential: response.credential }),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw { status: res.status, payload: data };
-        setAuthToken(data.token);
-        state.token = data.token;
-        state.user = { user_id: data.user_id, username: data.username };
-        state.creatorId = state.user.user_id;
-        closeAuthModal();
-        renderAuthStatus();
-        await loadYourAnimals();
-      } catch (err) {
-        if (errEl) {
-          errEl.textContent = err.payload?.error || "Sign-in failed.";
-          errEl.hidden = false;
-        }
-      }
-    },
-  });
-  google.accounts.id.renderButton(container, {
-    type: "standard",
-    theme: "filled_blue",
-    size: "large",
-    text: "signin_with",
-    width: 280,
-  });
 }
 
 function openAuthModal(message) {
   const modal = document.getElementById("authModal");
   const errEl = document.getElementById("authError");
   const configErr = document.getElementById("authConfigError");
-  const container = document.getElementById("googleSignInContainer");
-  const usernameInput = document.getElementById("authUsername");
-  const passwordInput = document.getElementById("authPassword");
+  const emailInput = document.getElementById("authEmail");
+  const noticeEl = document.getElementById("authMagicLinkNotice");
+  const submitBtn = document.getElementById("authMagicLinkBtn");
   if (errEl) {
     if (message) {
       errEl.textContent = message;
@@ -729,30 +722,21 @@ function openAuthModal(message) {
       errEl.hidden = true;
     }
   }
+  if (noticeEl) noticeEl.hidden = true;
   if (configErr) configErr.hidden = true;
-  if (container) container.innerHTML = "";
-  if (usernameInput) usernameInput.value = "";
-  if (passwordInput) passwordInput.value = "";
-  setAuthMode("login");
+  if (emailInput) emailInput.value = "";
   if (modal) {
     modal.removeAttribute("hidden");
     modal.setAttribute("aria-hidden", "false");
   }
-  if (!state.googleClientId) {
+  if (!state.supabaseUrl || !state.supabaseAnonKey) {
     if (configErr) {
-      configErr.textContent = "Google sign-in is disabled on this server. Use a local account instead.";
+      configErr.textContent = "Magic link sign-in is not configured.";
       configErr.hidden = false;
     }
-  } else {
-    if (typeof google !== "undefined" && google.accounts && google.accounts.id) {
-      renderGoogleSignInButton(container);
-    } else {
-      const script = document.createElement("script");
-      script.src = "https://accounts.google.com/gsi/client";
-      script.async = true;
-      script.onload = () => renderGoogleSignInButton(container);
-      document.head.appendChild(script);
-    }
+    if (submitBtn) submitBtn.disabled = true;
+  } else if (submitBtn) {
+    submitBtn.disabled = false;
   }
 }
 
@@ -760,14 +744,14 @@ function closeAuthModal() {
   const modal = document.getElementById("authModal");
   const errEl = document.getElementById("authError");
   const configErr = document.getElementById("authConfigError");
-  const container = document.getElementById("googleSignInContainer");
+  const noticeEl = document.getElementById("authMagicLinkNotice");
   if (modal) {
     modal.setAttribute("hidden", "");
     modal.setAttribute("aria-hidden", "true");
   }
   if (errEl) errEl.hidden = true;
   if (configErr) configErr.hidden = true;
-  if (container) container.innerHTML = "";
+  if (noticeEl) noticeEl.hidden = true;
 }
 
 document.querySelector(".auth-modal-backdrop")?.addEventListener("click", closeAuthModal);
@@ -793,6 +777,7 @@ document.querySelectorAll(".filter-pill").forEach((btn) => {
 });
 
 loadConfig()
+  .then(() => initSupabase())
   .then(() => loadAuth())
   .then(() => renderAuthStatus())
   .then(() => loadAnimals())
