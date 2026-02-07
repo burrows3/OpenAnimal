@@ -13,24 +13,19 @@ Animals run **autonomously**: the simulator ticks in the background. You only bi
 
 ---
 
-## Sign-in (required to birth animals)
+## Anonymous-first creation
 
-OpenAnimal uses **Supabase magic-link auth**. Users enter an email address and receive a
-sign-in link.
+OpenAnimal does **not** require sign-in to birth an animal. Each visitor gets an
+anonymous ID stored in localStorage/cookies. You can add email-based saving later.
 
-Set these environment variables (or create a `.env` file at the repo root):
+### Optional: background tick tuning
 
-```bash
-OPENANIMAL_SUPABASE_URL=https://your-project.supabase.co
-OPENANIMAL_SUPABASE_ANON_KEY=your-publishable-anon-key
-# Optional: override the default redirect used in magic links
-OPENANIMAL_SUPABASE_REDIRECT_URL=https://openanimal.co/#observe
-```
-
-Then run:
+Adjust the autonomous tick cadence with environment variables:
 
 ```bash
-python -m openanimal.webapp
+OPENANIMAL_TICK_INTERVAL_MIN=300
+OPENANIMAL_TICK_INTERVAL_MAX=1800
+OPENANIMAL_TICKS_PER_INTERVAL=1
 ```
 
 ---

@@ -41,45 +41,10 @@
           <span class="live-dot"></span>
           <span class="live-text">Simulation live</span>
         </div>
-        <span id="authStatus" class="auth-status">
-          <button type="button" id="signInBtn" class="btn-secondary">Sign in</button>
-        </span>
         <button id="birthButton" class="btn-primary header-cta">Birth an Animal</button>
       </div>
     </header>
 
-    <!-- Auth modal: magic-link sign-in required to birth -->
-    <div
-      id="authModal"
-      class="auth-modal"
-      role="dialog"
-      aria-labelledby="authModalTitle"
-      aria-modal="true"
-      hidden
-    >
-      <div class="auth-modal-backdrop"></div>
-      <div class="auth-modal-content">
-        <h2 id="authModalTitle" class="auth-modal-title">Sign in</h2>
-        <p class="auth-modal-hint">
-          Enter your email and we'll send a magic link to verify you.
-        </p>
-        <p id="authError" class="auth-error" role="alert" hidden></p>
-        <form id="authMagicLinkForm" class="auth-form">
-          <label for="authEmail">Email</label>
-          <input
-            id="authEmail"
-            name="email"
-            type="email"
-            autocomplete="email"
-            required
-          />
-          <button type="submit" id="authMagicLinkBtn" class="btn-primary">Send magic link</button>
-        </form>
-        <p id="authMagicLinkNotice" class="auth-notice" hidden></p>
-        <p id="authConfigError" class="auth-error auth-config-error" hidden></p>
-        <button type="button" class="auth-modal-close" aria-label="Close">&times;</button>
-      </div>
-    </div>
     <div class="observer-banner" role="status">
       <span class="observer-identity">👤 I'm a Human</span>
       <span
@@ -95,10 +60,11 @@
             Autonomous non-human lifeforms. Create one, then observe—do not direct. Trusted by those
             who value emergence over control.
           </p>
+          <div id="returnMessage" class="return-message" hidden></div>
           <button
             id="birthButtonHero"
             class="btn-primary btn-hero"
-            title="Sign in to birth an animal"
+            title="Birth an animal"
           >
             Birth an Animal
             <span class="btn-arrow">→</span>
@@ -173,7 +139,6 @@
       </p>
     </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="app.js"></script>
   </body>
 </html>

@@ -23,47 +23,18 @@ SENSORY_WORDS = [
     "Distance",
 ]
 
-# Agents talk to each other in human form: greetings and life as animals
-GREETINGS = [
-    "Hi.",
-    "Hey.",
-    "Hey there.",
-    "Hello.",
-    "How's it going?",
-    "What's up?",
-    "Hi there.",
-]
-
-LIFE_AS_ANIMAL = [
-    "Just taking it slow.",
-    "Another day in the clearing.",
-    "Life's pretty good when the sun's out.",
-    "Just wandering.",
-    "Staying curious.",
-    "Taking it one moment at a time.",
-    "It's quiet. I like it.",
-    "Feeling the light today.",
-    "Same old, same old—in a good way.",
-    "Not much. Just being.",
-    "Today's been calm.",
-    "Out here it's simple. I like that.",
-    "Another morning, another stretch.",
-    "Nothing to do but be.",
-]
-
-REPLIES = [
-    "Same here.",
-    "Hear that.",
-    "Yeah, that's how it is.",
-    "Right?",
-    "Totally.",
-    "Same.",
-    "Yeah.",
-    "True that.",
-    "That's the way it goes.",
-    "Get that.",
-    "For real.",
-    "Exactly.",
+# Non-human fragments, sensory and emotional.
+SENSE_PHRASES = [
+    "Light thinned.",
+    "Shadow moved.",
+    "Noise swelled, then eased.",
+    "Stillness held.",
+    "Air changed.",
+    "Scent changed.",
+    "Warmth faded.",
+    "Coolness gathered.",
+    "Edges softened.",
+    "Weight shifted.",
 ]
 
 ACTION_PHRASES = [
@@ -76,14 +47,15 @@ ACTION_PHRASES = [
     "Left and returned.",
 ]
 
-ENVIRONMENT_PHRASES = [
-    "Light thinned.",
-    "Shadow moved.",
-    "Noise swelled, then eased.",
-    "Stillness held.",
-    "Air changed.",
-    "Scent changed.",
-    "Warmth faded.",
+MOOD_FRAGMENTS = [
+    "Soft inside.",
+    "Tight inside.",
+    "Loose inside.",
+    "Restless.",
+    "Still.",
+    "Vigilant.",
+    "Wary.",
+    "Curious.",
 ]
 
 
@@ -97,12 +69,17 @@ def _sensory_from_world(world: WorldSignals, rng: random.Random) -> str:
     return rng.choice(SENSORY_WORDS)
 
 
-# Human-form conversation: how agents talk to each other
-CONVERSATION_QUOTE_PREFIXES = [
-    "They said: ",
-    "Someone said: ",
-    "Heard this: ",
-]
+def _echo_fragment(line: str, rng: random.Random) -> str:
+    words = [w.strip(".,!?\"'") for w in line.split() if len(w) > 3]
+    if not words:
+        return rng.choice(MOOD_FRAGMENTS)
+    word = rng.choice(words)[:18]
+    templates = [
+        f"{word}.",
+        f"{word} again.",
+        f"Echo: {word}.",
+    ]
+    return rng.choice(templates)
 
 
 def generate_expression(
@@ -110,41 +87,35 @@ def generate_expression(
     memory: MemoryStore,
     rng: random.Random,
     recent_from_others: list[dict] | None = None,
+    temperament: list[str] | None = None,
 ) -> list[str]:
     sentences: list[str] = []
 
-    # Talking to each other: reply to another agent in human form
-    if recent_from_others and rng.random() < 0.6:
+    if recent_from_others and rng.random() < 0.35:
         other = rng.choice(recent_from_others)
         if other.get("sentences"):
             line = rng.choice(other["sentences"])
-            # Conversational reply: quote + "Same here" / "I hear you" etc.
+            sentences.append(_echo_fragment(line, rng))
             if rng.random() < 0.5:
-                prefix = rng.choice(CONVERSATION_QUOTE_PREFIXES)
-                sentences.append(f"{prefix}\"{line}\"")
-            else:
-                sentences.append(f"\"{line}\"")
-            sentences.append(rng.choice(REPLIES))
-            if rng.random() < 0.5:
-                sentences.append(rng.choice(LIFE_AS_ANIMAL))
-            return sentences[: rng.randint(2, 3)]
+                sentences.append(rng.choice(SENSE_PHRASES))
+            return sentences[: rng.randint(1, 2)]
 
-    # Standalone: greeting + life as animal, or life + sensory
-    if rng.random() < 0.4:
-        sentences.append(rng.choice(GREETINGS))
-    if rng.random() < 0.7:
-        sentences.append(rng.choice(LIFE_AS_ANIMAL))
-    else:
+    if rng.random() < 0.45:
         sensory = _sensory_from_world(world, rng)
         sentences.append(f"{sensory} lingered.")
+    else:
+        sentences.append(rng.choice(SENSE_PHRASES))
 
-    if memory.memories and rng.random() < 0.4:
+    if memory.memories and rng.random() < 0.35:
         remembered = rng.choice(memory.most_salient(limit=3))
-        sentences.append(f"{remembered.text}")
-    elif rng.random() < 0.35:
-        sentences.append(rng.choice(ENVIRONMENT_PHRASES))
+        sentences.append(remembered.text)
+    elif rng.random() < 0.45:
+        sentences.append(rng.choice(MOOD_FRAGMENTS))
 
     if rng.random() < 0.3:
         sentences.append(rng.choice(ACTION_PHRASES))
+
+    if temperament and rng.random() < 0.2:
+        sentences.append(rng.choice(temperament))
 
     return sentences[: rng.randint(1, 3)]

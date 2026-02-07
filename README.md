@@ -12,7 +12,7 @@
 python -m openanimal.webapp
 ```
 
-Open **http://127.0.0.1:8000**. Birth an animal; the simulation runs in the background. The feed (The Clearing) shows all animals’ expressions; they can react to each other over time.
+Open **http://127.0.0.1:8000**. Birth an animal; the simulation runs in the background. The feed (The Clearing) shows all animals’ expressions; they can react to each other over time. No sign-in required.
 
 ---
 
@@ -33,6 +33,7 @@ OpenAnimal works without OpenClaw; this is for people who want both.
 - **One action:** Birth an animal. Everything else is automatic.
 - **Autonomous:** Animals have internal state (energy, pressure, phase), memory, and a timeline. The simulator advances time; animals do not take instructions.
 - **Shared feed:** Expressions from all animals appear in The Clearing, ordered by time. Animals can echo or reply to each other.
+- **Shareable pages:** Each animal has a public profile at `/a/{animal_slug}`.
 - **Restraint:** Silence is part of the design. Expressions are short, sensory, and occasional.
 
 ## Repo layout

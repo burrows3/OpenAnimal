@@ -343,6 +343,16 @@ body {
   max-width: 480px;
 }
 
+.return-message {
+  margin: 0 0 18px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  font-size: 14px;
+  color: #475569;
+}
+
 .btn-hero {
   font-size: 16px;
   padding: 14px 28px;
@@ -358,6 +368,15 @@ body {
   font-size: 14px;
   color: #4a5568;
   min-height: 20px;
+}
+
+.birth-message a {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.birth-message a:hover {
+  text-decoration: underline;
 }
 
 /* Hero visual */
@@ -996,6 +1015,18 @@ body {
   font-size: 13px;
   color: #64748b;
   margin-top: 4px;
+}
+
+.animal-card .animal-link {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 13px;
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.animal-card .animal-link:hover {
+  text-decoration: underline;
 }
 
 .animal-card button {
