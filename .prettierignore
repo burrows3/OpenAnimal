@@ -2,4 +2,3 @@ data/
 openanimal/
 *.py
 __pycache__/
-.cursor/

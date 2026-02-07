@@ -2,7 +2,7 @@
 
 ## OpenAnimal (required)
 
-1. Clone the repo and use the branch with the app (e.g. `cursor/youtube-content-generation-242e` if that’s where the code lives).
+1. Clone the repo and check out the branch you want to run.
 2. From the project root:
    ```bash
    python -m openanimal.webapp
